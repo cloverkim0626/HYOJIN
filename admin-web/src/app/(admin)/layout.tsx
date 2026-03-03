@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           Explore
         </div>
         <nav className="flex-1 p-4 space-y-2 mt-4">
-          <Link href="/" className="block px-4 py-3 rounded-lg hover:bg-[#1a1740] transition-colors font-medium">Dashboard</Link>
+          <Link href="/dashboard" className="block px-4 py-3 rounded-lg hover:bg-[#1a1740] transition-colors font-medium">Dashboard</Link>
           <Link href="/passages" className="block px-4 py-3 rounded-lg bg-[#2a266b] text-white shadow-lg font-medium border border-[#4a41c5]">지문 창고</Link>
           <Link href="/questions" className="block px-4 py-3 rounded-lg hover:bg-[#1a1740] transition-colors font-medium">생성된 문제지</Link>
           <Link href="/students" className="block px-4 py-3 rounded-lg hover:bg-[#1a1740] transition-colors font-medium">학생 목록</Link>
