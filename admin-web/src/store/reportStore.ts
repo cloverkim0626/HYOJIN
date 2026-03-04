@@ -110,16 +110,22 @@ export const useReportStore = create<ReportStore>()(
                 )
             })),
             seedSampleData: () => set((state) => {
-                if (state.classes.some(c => c.id === 'c-sample')) return state;
+                const sampleClass = {
+                    id: 'c-sample',
+                    name: '[공개용] 리포트 샘플',
+                    students: [{ id: 's-sample', name: '샘플학생', report: { dailyHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>' } }]
+                };
+
+                const sampleExists = state.classes.some(c => c.id === 'c-sample');
+
+                if (sampleExists) {
+                    return {
+                        classes: state.classes.map(c => c.id === 'c-sample' ? sampleClass : c)
+                    };
+                }
+
                 return {
-                    classes: [
-                        {
-                            id: 'c-sample',
-                            name: '[공개용] 리포트 샘플',
-                            students: [{ id: 's-sample', name: '샘플학생', report: { dailyHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>' } }]
-                        },
-                        ...state.classes
-                    ]
+                    classes: [sampleClass, ...state.classes]
                 };
             })
         }),
