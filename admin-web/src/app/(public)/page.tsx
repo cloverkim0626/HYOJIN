@@ -741,8 +741,20 @@ const ReportSection = () => {
     // Viewer state
     const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-    const activeClass = classes.find(c => c.id === selectedClassId);
-    const activeStudent = activeClass?.students.find(s => s.id === selectedStudentId);
+    let activeClass = classes.find(c => c.id === selectedClassId);
+    let activeStudent = activeClass?.students.find(s => s.id === selectedStudentId);
+
+    // 강력한 예외 처리: 모바일 등 특정 환경에서 스토어 동기화가 지연/실패하더라도 샘플은 무조건 렌더링되게 강제
+    if (selectedClassId === 'c-sample' && selectedStudentId === 's-sample' && !activeStudent) {
+        activeClass = { id: 'c-sample', name: '[공개용] 리포트 샘플', students: [] };
+        activeStudent = {
+            id: 's-sample',
+            name: '샘플학생',
+            report: {
+                dailyHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>'
+            }
+        };
+    }
 
     const handleLogin = () => {
         if (password === '1234') { // Hardcoded for MVP
