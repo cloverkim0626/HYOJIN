@@ -72,56 +72,22 @@ const Typewriter = ({ text, delay = 0, loop = false, textClass = "" }: { text: s
 
 const ScreenAdjustmentBackground = () => {
     return (
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-50 flex">
-            {/* Left Side: Before (Blurry/Analog/Noisy) */}
-            <div className="w-1/2 h-full relative border-r border-slate-300/50 overflow-hidden">
-                <div className="absolute inset-0 bg-slate-200/40 backdrop-blur-[2px]" />
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-white flex justify-center">
+            {/* Subtle dot grid */}
+            <div
+                className="absolute inset-0 opacity-[0.4]"
+                style={{
+                    backgroundImage: 'radial-gradient(circle at center, #cbd5e1 1px, transparent 1px)',
+                    backgroundSize: '32px 32px'
+                }}
+            />
 
-                {/* Horizontal scanlines effect */}
-                <div
-                    className="absolute inset-0 opacity-10"
-                    style={{
-                        backgroundImage: 'repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px)'
-                    }}
-                />
+            {/* Very soft gradient glows purely for professional depth (no sci-fi) */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-50/50 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-slate-50/80 rounded-full blur-[100px]" />
 
-                {/* Random analog static/glitch blocks */}
-                <motion.div
-                    animate={{ opacity: [0.1, 0.3, 0.1], y: [0, 20, 0] }}
-                    transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                    className="absolute top-1/4 left-1/4 w-32 h-8 bg-slate-300/30 blur-sm"
-                />
-                <motion.div
-                    animate={{ opacity: [0.2, 0.4, 0.2], x: [0, -10, 0] }}
-                    transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                    className="absolute bottom-1/3 right-1/4 w-48 h-12 bg-slate-400/20 blur-md"
-                />
-
-                {/* Overlay gradient to blend bottom */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-100/80" />
-            </div>
-
-            {/* Right Side: After (Clear/Digital/Grid) */}
-            <div className="w-1/2 h-full relative bg-white overflow-hidden">
-                {/* Crisp dot grid background */}
-                <div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                        backgroundImage: 'radial-gradient(circle at center, #cbd5e1 1px, transparent 1px)',
-                        backgroundSize: '24px 24px'
-                    }}
-                />
-
-                {/* Subtle digital glow */}
-                <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-100/50 rounded-full blur-[80px]" />
-                <div className="absolute bottom-[-10%] right-[20%] w-[50%] h-[40%] bg-cyan-50/60 rounded-full blur-[100px]" />
-            </div>
-
-            {/* Center Divider Line with subtle glow */}
-            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-slate-300 to-transparent shadow-[0_0_10px_rgba(203,213,225,0.8)] z-10" />
-
-            {/* Overlay gradient to ensure text readability */}
-            <div className="absolute inset-0 bg-white/40 z-20 pointer-events-none" />
+            {/* Gradient overlay to ensure text is perfectly readable */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-white/90 z-20 pointer-events-none" />
         </div>
     );
 };
@@ -149,6 +115,20 @@ const App = () => {
                             <Typewriter text="김효진 영어" delay={500} loop={true} textClass="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 bg-clip-text text-transparent" />
                         </h1>
                         <div className="flex items-center gap-3">
+                            <motion.div
+                                animate={{ y: [0, -4, 0] }}
+                                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                                className="hidden sm:flex items-center gap-1.5 mr-2"
+                            >
+                                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 shadow-sm flex items-center gap-1">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                    </span>
+                                    상담신청 Click!
+                                </span>
+                                <ChevronRight size={12} className="text-blue-400" />
+                            </motion.div>
                             <a href="https://open.kakao.com/o/sY6xBxji" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#FEE500] hover:bg-[#ffe833] text-[#371d1e] flex items-center justify-center text-xs shadow-lg transition-transform hover:scale-110" title="카카오톡 상담">
                                 <MessageCircle size={16} fill="currentColor" strokeWidth={0} />
                             </a>
@@ -325,11 +305,9 @@ const HomeSection = () => {
                     </div>
 
                     <div className="w-full text-center space-y-4 relative z-10 px-4 mt-6">
-                        <p className="text-blue-600 font-semibold text-sm tracking-wide">
-                            대형강의에 끼워맞추지 않습니다.
-                        </p>
-                        <h3 className="text-slate-900 font-bold text-xl mb-4 flex items-center justify-center gap-2 pt-1 pb-2">
-                            정체된 영어 성적, 원인부터 찾습니다.
+                        <h3 className="text-slate-900 font-extrabold text-[22px] sm:text-2xl leading-snug mb-4 tracking-tight">
+                            대형강의에 끼워맞추는 수업은 <span className="text-blue-600">No.</span><br />
+                            정체된 영어성적 원인부터 찾아야 합니다.
                         </h3>
                         <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
                             <span className="text-slate-700">개별 진단</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-slate-700">맞춤 커리큘럼</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-blue-700 font-bold tracking-wide">[낭비 없는 고득점]</span>
@@ -483,7 +461,10 @@ const HomeSection = () => {
                             </div>
                             <div className="text-left">
                                 <p className="text-base font-bold text-blue-900 tracking-wide" style={{ fontFamily: "'Playfair Display', serif" }}>Text Universe</p>
-                                <p className="text-[10px] text-slate-500 font-medium">학생 복습용 앱 · 구경하기</p>
+                                <p className="text-[10px] text-slate-500 font-medium">
+                                    학생 복습용 앱 · 구경하기
+                                    <span className="text-rose-500 font-bold ml-1 tracking-tighter">*PC에서 확인해 주세요.</span>
+                                </p>
                             </div>
                         </div>
                         <ExternalLink size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
