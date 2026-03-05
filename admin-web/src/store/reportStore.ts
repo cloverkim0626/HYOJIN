@@ -100,11 +100,38 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                     }))
             }));
 
-            set({ classes: formattedClasses, isLoading: false });
+            // Add sample data to the front
+            const sampleClass = {
+                id: 'c-sample',
+                name: '[공개용] 리포트 샘플',
+                templates: [],
+                students: [{
+                    id: 's-sample',
+                    name: '샘플학생',
+                    classId: 'c-sample',
+                    password: '1234',
+                    reports: []
+                }]
+            };
+
+            set({ classes: [sampleClass, ...formattedClasses], isLoading: false });
 
         } catch (error) {
             console.error('Error fetching data from Supabase:', error);
-            set({ isLoading: false });
+            // Even on error, show the sample class so the UI isn't broken
+            const sampleClass = {
+                id: 'c-sample',
+                name: '[공개용] 리포트 샘플',
+                templates: [],
+                students: [{
+                    id: 's-sample',
+                    name: '샘플학생',
+                    classId: 'c-sample',
+                    password: '1234',
+                    reports: []
+                }]
+            };
+            set({ classes: [sampleClass], isLoading: false });
         }
     },
 
