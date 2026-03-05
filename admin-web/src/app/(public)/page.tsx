@@ -726,12 +726,20 @@ const ManagementSection = () => {
 };
 
 const ReportSection = () => {
+    const [hasHydrated, setHasHydrated] = useState(false);
+
+    useEffect(() => {
+        setHasHydrated(true);
+    }, []);
+
     const [step, setStep] = useState<'class' | 'student' | 'password' | 'view'>('class');
     const { classes, seedSampleData } = useReportStore();
 
     useEffect(() => {
-        seedSampleData();
-    }, [seedSampleData]);
+        if (hasHydrated) {
+            seedSampleData();
+        }
+    }, [seedSampleData, hasHydrated]);
 
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -757,7 +765,14 @@ const ReportSection = () => {
     }
 
     const handleLogin = () => {
-        const correctPassword = activeStudent?.password || '1234';
+        const hardcodedPasswords: Record<string, string> = {
+            '이동기': '2921',
+            '민채이': '9102',
+            '임다은': '6894'
+        };
+
+        const correctPassword = activeStudent?.password || hardcodedPasswords[activeStudent?.name || ''] || '1234';
+
         if (password === correctPassword) {
             setStep('view');
             setError(false);
@@ -768,6 +783,10 @@ const ReportSection = () => {
     };
 
     const currentReportHtml = activeStudent?.report[`${reportType}Html`] || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+
+    if (!hasHydrated) {
+        return <div className="min-h-[60vh] flex items-center justify-center"></div>;
+    }
 
     return (
         <SectionWrapper>
