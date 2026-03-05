@@ -13,10 +13,11 @@ body{background:#fff;font-family:'Pretendard',-apple-system,sans-serif;color:var
 .hd-tag{font-size:10px;font-weight:900;color:var(--c2);letter-spacing:.15em;margin-bottom:8px}
 .hd-name{font-size:30px;font-weight:800;line-height:1.2;letter-spacing:-.04em;margin-bottom:12px}
 .hd-meta{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g1)}
-.sec{margin-bottom:48px}
-.sec-lab{font-size:10px;font-weight:900;border-top:1px solid #e5e7eb;padding-top:10px;margin-bottom:20px;display:block;color:var(--g1);letter-spacing:.08em}
-.ch{font-size:18px;font-weight:800;margin-bottom:10px;letter-spacing:-.02em}
-.cp{font-size:15px;line-height:1.85;color:#374151;font-weight:400}
+.sec{margin-bottom:60px}
+.sec-lab{font-size:12px;font-weight:900;text-align:center;display:block;color:#000;letter-spacing:.2em;text-transform:uppercase;margin-bottom:32px;position:relative}
+.sec-lab::before{content:'';display:block;width:24px;height:2px;background:var(--c2);margin:0 auto 10px}
+.ch{font-size:20px;font-weight:800;margin-bottom:12px;letter-spacing:-.02em;text-align:center}
+.cp{font-size:15px;line-height:1.9;color:#374151;font-weight:400;text-align:center}
 .sw{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:3px}
 .b-r{background:#fef2f2;color:var(--c3);border:1px solid #fecaca}

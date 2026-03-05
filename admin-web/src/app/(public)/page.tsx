@@ -931,13 +931,14 @@ const ReportSection = () => {
                     {step === 'view' && activeStudent && (
                         <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
 
-                            {/* Clean Professional Greeting */}
-                            <div className="pt-4 text-center">
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
-                                    {activeStudent.name} <span className="font-medium text-slate-400">학습 리포트</span>
+                            {/* Personal Premium Greeting */}
+                            <div className="pt-8 pb-4 text-center">
+                                <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                                    안녕하세요, <span className="text-blue-600 underline decoration-blue-100 underline-offset-4">{activeStudent.name}</span> 학부모님!
                                 </h2>
-                                <p className="text-sm text-slate-500 italic">
-                                    "안녕하세요 학부모님! 오늘의 학습 성취도를 보고드립니다."
+                                <p className="mt-4 text-slate-500 font-medium italic">
+                                    "오늘의 성취도를 정성껏 분석해 보고드립니다."
                                 </p>
                             </div>
 
