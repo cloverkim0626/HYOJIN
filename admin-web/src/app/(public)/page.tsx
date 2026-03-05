@@ -929,23 +929,20 @@ const ReportSection = () => {
                     )}
 
                     {step === 'view' && activeStudent && (
-                        <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                        <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
 
-                            {/* Header */}
-                            <div className="flex justify-between items-start bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                                <div>
-                                    <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900">
-                                        {activeStudent.name} <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium border border-blue-100">{activeClass?.name}</span>
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-1">최신 학습 데이터가 반영되었습니다.</p>
-                                </div>
-                                <button onClick={() => { setStep('class'); setPassword(''); }} className="text-[10px] text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
-                                    로그아웃
-                                </button>
+                            {/* Welcome Greeting */}
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl border border-blue-100">
+                                <p className="text-lg font-bold text-slate-800">
+                                    안녕하세요, <span className="text-blue-600">{activeStudent.name}</span> 학부모님! 👋
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {activeClass?.name} · 최신 학습 데이터가 반영되었습니다.
+                                </p>
                             </div>
 
-                            {/* Toggle Buttons */}
-                            <div className="flex gap-2 bg-slate-50 border border-slate-200 p-1 rounded-xl">
+                            {/* Report Type Toggle */}
+                            <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
                                 {(['daily', 'weekly', 'monthly'] as const).map(type => (
                                     <button
                                         key={type}
@@ -953,9 +950,12 @@ const ReportSection = () => {
                                             setReportType(type);
                                             setCurrentReportIndex(0);
                                         }}
-                                        className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${reportType === type ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent'}`}
+                                        className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${reportType === type
+                                            ? 'bg-white text-blue-600 shadow-sm border border-blue-200'
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-white/50 border border-transparent'
+                                            }`}
                                     >
-                                        {type === 'daily' ? '일간' : type === 'weekly' ? '주간' : '월간'} 리포트
+                                        {type === 'daily' ? '📋 일간' : type === 'weekly' ? '📊 주간' : '📈 월간'}
                                     </button>
                                 ))}
                             </div>
@@ -965,13 +965,13 @@ const ReportSection = () => {
                                 <button
                                     onClick={handlePrevReport}
                                     disabled={currentReportIndex >= sortedReports.length - 1}
-                                    className="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-slate-50 transition-colors"
                                 >
-                                    <ChevronRight size={20} className="rotate-180" />
+                                    <ChevronRight size={18} className="rotate-180" />
                                 </button>
 
-                                <div className="text-center">
-                                    <div className="text-sm font-bold text-slate-800">
+                                <div className="text-center flex-1 min-w-0 px-2">
+                                    <div className="text-sm font-bold text-slate-800 truncate">
                                         {activeReport ? activeReport.publishedDate : '기록 없음'}
                                     </div>
                                     <div className="text-[10px] text-slate-400">
@@ -982,16 +982,22 @@ const ReportSection = () => {
                                 <button
                                     onClick={handleNextReport}
                                     disabled={currentReportIndex === 0}
-                                    className="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-slate-50 transition-colors"
                                 >
-                                    <ChevronRight size={20} />
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
 
                             {/* Rendered HTML Content */}
-                            <div className="bg-white text-slate-900 min-h-[300px] rounded-2xl shadow-2xl relative overflow-hidden flex justify-center">
-                                {/* This renders the raw HTML stored by the admin without Tailwind prose overriding styles */}
+                            <div className="bg-white text-slate-900 min-h-[300px] rounded-2xl shadow-lg relative overflow-hidden flex justify-center border border-slate-100">
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
+                            </div>
+
+                            {/* Logout */}
+                            <div className="flex justify-center pt-2">
+                                <button onClick={() => { setStep('class'); setPassword(''); }} className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-lg transition-colors">
+                                    로그아웃
+                                </button>
                             </div>
 
                         </motion.div>

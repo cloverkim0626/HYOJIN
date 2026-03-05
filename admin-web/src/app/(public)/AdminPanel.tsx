@@ -10,7 +10,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [error, setError] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const { classes, fetchData, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport } = useReportStore();
+    const { classes, fetchData, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport, fetchStudentReports } = useReportStore();
+    const [existingReports, setExistingReports] = useState<any[]>([]);
+    const [isEditing, setIsEditing] = useState(false);
 
     React.useEffect(() => {
         fetchData();
@@ -51,12 +53,21 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         }
     };
 
-    const openStudentEditor = (student: any) => {
+    const openStudentEditor = async (student: any) => {
         setSelectedStudentId(student.id);
         const today = new Date().toISOString().split('T')[0];
-        setFormData(prev => ({
-            ...prev,
-            published_date: today,
+        resetForm(today);
+        // Fetch existing reports for this student
+        const reports = await fetchStudentReports(student.id);
+        setExistingReports(reports);
+        // Try to load today's report if it exists
+        loadExistingReport(reports, today, reportType);
+    };
+
+    const resetForm = (date: string) => {
+        setIsEditing(false);
+        setFormData({
+            published_date: date,
             attendance_status: '정상 등원 완료',
             attendance_time: '',
             attendance_reason: '',
@@ -67,7 +78,42 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             next_date_str: '',
             next_content: '',
             teacher_comment: ''
-        }));
+        });
+    };
+
+    const loadExistingReport = (reports: any[], date: string, type: string) => {
+        const existing = reports.find(r => r.publishedDate === date && r.reportType === type);
+        if (existing?.rawDataJson) {
+            const raw = existing.rawDataJson;
+            setIsEditing(true);
+            setFormData({
+                published_date: date,
+                attendance_status: raw.attendance_status || '정상 등원 완료',
+                attendance_time: raw.attendance_time || '',
+                attendance_reason: raw.attendance_reason || '',
+                lesson_content: raw.lesson_content || '',
+                homeworks: raw.homeworks?.length > 0 ? raw.homeworks : [{ name: '', status: '미완료', plan: '' }],
+                tests: raw.tests?.length > 0 ? raw.tests : [{ name: '', desc: '', score: '', total: '', avg: '' }],
+                test_images: raw.test_images || [],
+                next_date_str: raw.next_date_str || '',
+                next_content: raw.next_content || '',
+                teacher_comment: raw.teacher_comment || ''
+            });
+        } else {
+            setIsEditing(false);
+        }
+    };
+
+    // When date or report type changes, try loading existing report
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = e.target.value;
+        setFormData(prev => ({ ...prev, published_date: newDate }));
+        loadExistingReport(existingReports, newDate, reportType);
+    };
+
+    const handleReportTypeChange = (type: 'daily' | 'weekly' | 'monthly') => {
+        setReportType(type);
+        loadExistingReport(existingReports, formData.published_date, type);
     };
 
     // --- Form State ---
@@ -391,15 +437,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                         <Edit3 size={18} className="text-rose-400" />
                                         {activeStudent.name} 학생 데이터 입력
+                                        {isEditing && <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/30 font-medium">기존 리포트 수정 중</span>}
                                     </h3>
                                     <button onClick={handleSaveReport} disabled={isSaving}
                                         className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-900/20 border border-emerald-400/20">
-                                        <Save size={16} /> {isSaving ? '저장 중...' : '리포트 발행 & 저장'}
+                                        <Save size={16} /> {isSaving ? '저장 중...' : isEditing ? '리포트 수정 저장' : '리포트 발행 & 저장'}
                                     </button>
                                 </div>
                                 <div className="flex gap-2 bg-black p-1 rounded-lg">
                                     {(['daily', 'weekly', 'monthly'] as const).map(type => (
-                                        <button key={type} onClick={() => setReportType(type)}
+                                        <button key={type} onClick={() => handleReportTypeChange(type)}
                                             className={`flex-1 py-2 text-sm text-center rounded-md font-medium transition-colors ${reportType === type ? 'bg-rose-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>
                                             {type === 'daily' ? '일간' : type === 'weekly' ? '주간' : '월간'} 템플릿
                                         </button>
@@ -413,8 +460,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     {/* 1. 발행 일자 */}
                                     <FormSection icon={<Calendar size={16} />} title="발행 일자 설정">
                                         <div>
-                                            <label className="block text-xs text-slate-400 mb-1">리포트 발행일</label>
-                                            <input type="date" name="published_date" value={formData.published_date} onChange={handleFormChange} className="input-field" />
+                                            <label className="block text-xs text-slate-400 mb-1">리포트 발행일 (날짜를 바꾸면 해당 날짜의 기존 리포트를 자동으로 불러옵니다)</label>
+                                            <input type="date" name="published_date" value={formData.published_date} onChange={handleDateChange} className="input-field" />
                                         </div>
                                     </FormSection>
 
