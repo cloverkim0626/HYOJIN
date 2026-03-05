@@ -151,11 +151,7 @@ const arago2DailyTemplate = `<!DOCTYPE html>
 
     <section class="section">
         <span class="section-label">02 / 과제 완료 현황</span>
-        <div class="status-wrap">
-            <span class="content-h">{{hw_name}}</span>
-            <span class="badge {{hw_badge_class}}">{{hw_status}}</span>
-        </div>
-        <p class="plan-box" style="display: {{hw_plan_display}}">→ 보완계획: {{hw_plan}}</p>
+        {{homeworks_html}}
     </section>
 
     <section class="section">
