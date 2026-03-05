@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { sampleDailyReportHtml } from './sampleReport';
 
 export interface ReportTemplate {
     id: string;
@@ -110,7 +111,15 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                     name: '샘플학생',
                     classId: 'c-sample',
                     password: '1234',
-                    reports: []
+                    reports: [{
+                        id: 'r-sample-1',
+                        studentId: 's-sample',
+                        reportType: 'daily' as const,
+                        publishedDate: '2026-03-05',
+                        finalHtml: sampleDailyReportHtml,
+                        rawDataJson: null,
+                        createdAt: new Date().toISOString()
+                    }]
                 }]
             };
 
