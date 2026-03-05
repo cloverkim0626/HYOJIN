@@ -14,6 +14,7 @@ export interface Student {
     id: string;
     name: string;
     report: StudentReport;
+    password?: string;
 }
 
 export interface ClassData {
@@ -37,9 +38,9 @@ const initialData: ClassData[] = [
         id: 'c1',
         name: '[WOODOK] 아라고2',
         students: [
-            { id: 's1', name: '이동기', report: { dailyHtml: '<h2>이동기 일간 리포트 (임시)</h2><p>오늘 단어 테스트 만점입니다.</p>' } },
-            { id: 's2', name: '민채이', report: { dailyHtml: '<h2>민채이 일간 리포트 (임시)</h2><p>과제 제출 완료.</p>' } },
-            { id: 's3', name: '임다은', report: { dailyHtml: '<h2>임다은 일간 리포트 (임시)</h2><p>수업 참여도 우수.</p>' } },
+            { id: 's1', name: '이동기', password: '2921', report: { dailyHtml: '<h2>이동기 일간 리포트 (임시)</h2><p>오늘 단어 테스트 만점입니다.</p>' } },
+            { id: 's2', name: '민채이', password: '9102', report: { dailyHtml: '<h2>민채이 일간 리포트 (임시)</h2><p>과제 제출 완료.</p>' } },
+            { id: 's3', name: '임다은', password: '6894', report: { dailyHtml: '<h2>임다은 일간 리포트 (임시)</h2><p>수업 참여도 우수.</p>' } },
         ]
     },
     {

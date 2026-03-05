@@ -757,7 +757,8 @@ const ReportSection = () => {
     }
 
     const handleLogin = () => {
-        if (password === '1234') { // Hardcoded for MVP
+        const correctPassword = activeStudent?.password || '1234';
+        if (password === correctPassword) {
             setStep('view');
             setError(false);
         } else {
@@ -858,7 +859,7 @@ const ReportSection = () => {
                             <h3 className="text-lg font-bold mb-1 text-slate-900">{activeStudent.name} 학생</h3>
                             <p className="text-xs text-blue-600 mb-6">{activeClass?.name}</p>
 
-                            <p className="text-xs text-slate-500 mb-6">부여받은 열람 비밀번호를 입력하세요. <br />(테스트용: 1234)</p>
+                            <p className="text-xs text-slate-500 mb-6 font-medium">(비밀번호를 잊으신 경우, 강사에게 문의해주세요.)</p>
                             <input
                                 type="password"
                                 value={password}
