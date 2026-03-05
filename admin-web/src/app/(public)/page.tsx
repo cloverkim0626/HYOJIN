@@ -782,7 +782,95 @@ const ReportSection = () => {
         }
     };
 
-    const currentReportHtml = activeStudent?.report[`${reportType}Html`] || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+    const minchaeyHtml = `
+<div class="container">
+    <div class="header">
+        <div class="brand-label">HIGH-RESOLUTION</div>
+        <h1>학습 분석 리포트</h1>
+        <div class="date-info">WOODOK 아라고2 | 민채이 학생</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">출결 및 학습 내용</div>
+        <div class="status-box">● 정상 등원</div>
+        <div class="lesson-list">
+            - 교과서 1과 예상문제 풀이<br>
+            - 교과 주요 어법 포인트 Review (핵심 문법 총정리)
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">과제 이행 현황</div>
+        <div class="hw-card">
+            <div class="hw-row">
+                <span class="hw-name">워크북 20~63p</span>
+                <span class="hw-badge">미완료</span>
+            </div>
+            <p class="hw-plan">→ 보완계획: 이번 주 금요일까지 풀이 완료 및 개별 확인 지도 예정</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">테스트 성취도 분석</div>
+        <div class="test-row">
+            <div class="test-info">
+                <div><span class="test-name">단어 테스트</span><div class="test-range">[1과 54~123번]</div></div>
+                <div class="score-box"><span class="score-now">47</span><span class="score-total">/70</span></div>
+            </div>
+            <div class="bar-container">
+                <div class="avg-marker" style="left: 70%;"></div>
+                <div class="bar-inner" style="width: 67.1%;"></div>
+            </div>
+            <div class="avg-label">반 평균 49점</div>
+        </div>
+
+        <div class="test-row">
+            <div class="test-info">
+                <div><span class="test-name">교과 1과 예상문제</span><div class="test-range">실전 문제 응용력 평가</div></div>
+                <div class="score-box"><span class="score-now">55</span><span class="score-total">/100</span></div>
+            </div>
+            <div class="bar-container">
+                <div class="avg-marker" style="left: 47.5%;"></div>
+                <div class="bar-inner" style="width: 55%;"></div>
+            </div>
+            <div class="avg-label">반 평균 47.5점</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">다음 차시 예고</div>
+        <div class="next-info">
+            - 교과 1과 단어 124번 ~ 끝까지 암기<br>
+            - 워크북 미완 부분 보완 및 오답 정리
+        </div>
+        <div class="next-class">
+            <span>다음 수업일</span>
+            <span style="color:var(--point-blue)">3월 9일 월요일</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">선생님 편지</div>
+        <span class="letter-to">To. 민채이 학부모님</span>
+        <p class="letter-content">
+            안녕하세요, 우독학원 영어 효진T 입니다.<br><br>
+            오늘 채이는 워크북 과제가 미완되어 금요일까지 모두 풀도록 지도하였습니다. 진도는 현재 시험범위 대부분 <b>1회독을 완료</b>한 상태입니다.<br><br>
+            중간고사 좋은 성적을 위해서 학습 습관을 다시 한번 다잡도록 하겠고, 시험에서 좋은 결과를 받을 수 있도록 약점에 집중하여 꼼꼼히 지도하겠습니다. :)
+        </p>
+    </div>
+
+    <div class="footer">
+        <a href="https://open.kakao.com/o/sY6xBxji" class="contact-link">선생님과 직접 상담하기</a>
+        <p style="margin-top: 20px; font-size: 10px; font-weight: 700; color: #cccccc; letter-spacing: 0.1em;">© KIM HYOJIN ENGLISH SOLUTIONS</p>
+    </div>
+</div>
+`;
+
+    let currentReportHtml = activeStudent?.report[`${reportType}Html`] || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+
+    if (activeStudent?.name === '민채이' && reportType === 'daily') {
+        currentReportHtml = minchaeyHtml;
+    }
 
     if (!hasHydrated) {
         return <div className="min-h-[60vh] flex items-center justify-center"></div>;
