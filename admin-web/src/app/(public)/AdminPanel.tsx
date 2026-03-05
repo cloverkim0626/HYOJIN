@@ -8,7 +8,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(false);
 
-    const { classes, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport } = useReportStore();
+    const { classes, fetchData, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport } = useReportStore();
+
+    React.useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
