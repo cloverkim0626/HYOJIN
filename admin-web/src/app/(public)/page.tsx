@@ -733,13 +733,16 @@ const ReportSection = () => {
     }, []);
 
     const [step, setStep] = useState<'class' | 'student' | 'password' | 'view'>('class');
-    const { classes, fetchData, isLoading } = useReportStore();
+    const { classes, fetchData, isLoading, fetchStudentReports } = useReportStore();
 
     useEffect(() => {
         if (hasHydrated) {
             fetchData();
         }
     }, [fetchData, hasHydrated]);
+
+    const [studentReports, setStudentReports] = useState<any[]>([]);
+    const [currentReportIndex, setCurrentReportIndex] = useState(0);
 
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -754,17 +757,24 @@ const ReportSection = () => {
 
     // 강력한 예외 처리: 모바일 등 특정 환경에서 스토어 동기화가 지연/실패하더라도 샘플은 무조건 렌더링되게 강제
     if (selectedClassId === 'c-sample' && selectedStudentId === 's-sample' && !activeStudent) {
-        activeClass = { id: 'c-sample', name: '[공개용] 리포트 샘플', students: [] };
+        activeClass = { id: 'c-sample', name: '[공개용] 리포트 샘플', students: [], templates: [] };
         activeStudent = {
             id: 's-sample',
             name: '샘플학생',
-            report: {
-                dailyHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>'
-            }
+            classId: 'c-sample',
+            reports: [{
+                id: 's-sample-1',
+                studentId: 's-sample',
+                reportType: 'daily',
+                publishedDate: new Date().toISOString().split('T')[0],
+                finalHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>',
+                rawDataJson: {},
+                createdAt: new Date().toISOString()
+            }]
         };
     }
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         const hardcodedPasswords: Record<string, string> = {
             '이동기': '2921',
             '민채이': '9102',
@@ -774,15 +784,35 @@ const ReportSection = () => {
         const correctPassword = activeStudent?.password || hardcodedPasswords[activeStudent?.name || ''] || '1234';
 
         if (password === correctPassword) {
-            setStep('view');
             setError(false);
+            if (activeStudent) {
+                const reports = await fetchStudentReports(activeStudent.id);
+                setStudentReports(reports);
+                setCurrentReportIndex(0);
+            }
+            setStep('view');
         } else {
             setError(true);
             setTimeout(() => setError(false), 1000);
         }
     };
 
-    let currentReportHtml = activeStudent?.report[`${reportType}Html`] || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+    // Filter reports by currently selected type
+    const reportsForType = studentReports.filter(r => r.reportType === reportType);
+
+    // Sort descending by date (newest first)
+    const sortedReports = [...reportsForType].sort((a, b) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
+
+    const activeReport = sortedReports[currentReportIndex];
+    let currentReportHtml = activeReport?.finalHtml || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+
+    const handleNextReport = () => {
+        if (currentReportIndex > 0) setCurrentReportIndex(prev => prev - 1);
+    };
+
+    const handlePrevReport = () => {
+        if (currentReportIndex < sortedReports.length - 1) setCurrentReportIndex(prev => prev + 1);
+    };
 
     if (!hasHydrated || isLoading) {
         return (
@@ -919,7 +949,10 @@ const ReportSection = () => {
                                 {(['daily', 'weekly', 'monthly'] as const).map(type => (
                                     <button
                                         key={type}
-                                        onClick={() => setReportType(type)}
+                                        onClick={() => {
+                                            setReportType(type);
+                                            setCurrentReportIndex(0);
+                                        }}
                                         className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${reportType === type ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent'}`}
                                     >
                                         {type === 'daily' ? '일간' : type === 'weekly' ? '주간' : '월간'} 리포트
@@ -927,22 +960,38 @@ const ReportSection = () => {
                                 ))}
                             </div>
 
+                            {/* Date Navigation */}
+                            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
+                                <button
+                                    onClick={handlePrevReport}
+                                    disabled={currentReportIndex >= sortedReports.length - 1}
+                                    className="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                >
+                                    <ChevronRight size={20} className="rotate-180" />
+                                </button>
+
+                                <div className="text-center">
+                                    <div className="text-sm font-bold text-slate-800">
+                                        {activeReport ? activeReport.publishedDate : '기록 없음'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                        {sortedReports.length > 0 ? `${sortedReports.length - currentReportIndex} / ${sortedReports.length}` : '0 / 0'}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleNextReport}
+                                    disabled={currentReportIndex === 0}
+                                    className="p-2 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+
                             {/* Rendered HTML Content */}
                             <div className="bg-white text-slate-900 min-h-[300px] rounded-2xl shadow-2xl relative overflow-hidden flex justify-center">
                                 {/* This renders the raw HTML stored by the admin without Tailwind prose overriding styles */}
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
-
-                                {/* Fallback button if link exists but HTML rendering has issues (optional) */}
-                                {activeStudent.report[`${reportType}Link`] && (
-                                    <a
-                                        href={activeStudent.report[`${reportType}Link`] || undefined}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="absolute bottom-4 right-4 bg-slate-900 text-white text-[10px] px-3 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-colors"
-                                    >
-                                        원본 링크 열기 <ExternalLink size={12} />
-                                    </a>
-                                )}
                             </div>
 
                         </motion.div>

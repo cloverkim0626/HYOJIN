@@ -1,26 +1,36 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
+export interface ReportTemplate {
+    id: string;
+    classId: string;
+    reportType: 'daily' | 'weekly' | 'monthly';
+    templateHtml: string;
+}
+
 export interface StudentReport {
-    dailyLink?: string | null;
-    dailyHtml?: string | null;
-    weeklyLink?: string | null;
-    weeklyHtml?: string | null;
-    monthlyLink?: string | null;
-    monthlyHtml?: string | null;
+    id: string;
+    studentId: string;
+    reportType: 'daily' | 'weekly' | 'monthly';
+    publishedDate: string; // YYYY-MM-DD
+    finalHtml: string;
+    rawDataJson: any;
+    createdAt: string;
 }
 
 export interface Student {
     id: string;
+    classId: string;
     name: string;
     password?: string | null;
-    report: StudentReport;
+    reports?: StudentReport[]; // Loaded on demand
 }
 
 export interface ClassData {
     id: string;
     name: string;
     students: Student[];
+    templates: ReportTemplate[];
 }
 
 interface ReportStore {
@@ -31,8 +41,9 @@ interface ReportStore {
     deleteClass: (classId: string) => Promise<void>;
     addStudent: (classId: string, studentName: string) => Promise<void>;
     deleteStudent: (classId: string, studentId: string) => Promise<void>;
-    updateStudentReport: (classId: string, studentId: string, report: Partial<StudentReport>) => Promise<void>;
-    seedSampleData: () => void;
+    saveReportTemplate: (classId: string, reportType: 'daily' | 'weekly' | 'monthly', templateHtml: string) => Promise<void>;
+    fetchStudentReports: (studentId: string) => Promise<StudentReport[]>;
+    saveStudentReport: (studentId: string, reportType: 'daily' | 'weekly' | 'monthly', publishedDate: string, finalHtml: string, rawDataJson: any) => Promise<void>;
 }
 
 export const useReportStore = create<ReportStore>((set, get) => ({
@@ -51,9 +62,16 @@ export const useReportStore = create<ReportStore>((set, get) => ({
 
             if (classesError) throw classesError;
 
+            // Fetch templates
+            const { data: templatesData, error: templatesError } = await supabase
+                .from('report_templates')
+                .select('*');
+
+            if (templatesError) throw templatesError;
+
             // Fetch students
             const { data: studentsData, error: studentsError } = await supabase
-                .from('report_students')
+                .from('students_list')
                 .select('*')
                 .order('created_at', { ascending: true });
 
@@ -63,31 +81,26 @@ export const useReportStore = create<ReportStore>((set, get) => ({
             const formattedClasses: ClassData[] = (classesData || []).map((cls: any) => ({
                 id: cls.id,
                 name: cls.name,
+                templates: (templatesData || [])
+                    .filter((t: any) => t.class_id === cls.id)
+                    .map((t: any) => ({
+                        id: t.id,
+                        classId: t.class_id,
+                        reportType: t.report_type,
+                        templateHtml: t.template_html
+                    })),
                 students: (studentsData || [])
                     .filter((stu: any) => stu.class_id === cls.id)
                     .map((stu: any) => ({
                         id: stu.id,
+                        classId: stu.class_id,
                         name: stu.name,
                         password: stu.password,
-                        report: {
-                            dailyHtml: stu.daily_html,
-                            dailyLink: stu.daily_link,
-                            weeklyHtml: stu.weekly_html,
-                            weeklyLink: stu.weekly_link,
-                            monthlyHtml: stu.monthly_html,
-                            monthlyLink: stu.monthly_link
-                        }
+                        reports: []
                     }))
             }));
 
-            // Add sample data to the front
-            const sampleClass = {
-                id: 'c-sample',
-                name: '[공개용] 리포트 샘플',
-                students: [{ id: 's-sample', name: '샘플학생', report: { dailyHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>' }, password: '1234' }]
-            };
-
-            set({ classes: [sampleClass, ...formattedClasses], isLoading: false });
+            set({ classes: formattedClasses, isLoading: false });
 
         } catch (error) {
             console.error('Error fetching data from Supabase:', error);
@@ -97,7 +110,7 @@ export const useReportStore = create<ReportStore>((set, get) => ({
 
     addClass: async (name) => {
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('report_classes')
                 .insert([{ name }])
                 .select()
@@ -111,7 +124,6 @@ export const useReportStore = create<ReportStore>((set, get) => ({
     },
 
     deleteClass: async (classId) => {
-        if (classId === 'c-sample') return;
         try {
             const { error } = await supabase
                 .from('report_classes')
@@ -126,10 +138,9 @@ export const useReportStore = create<ReportStore>((set, get) => ({
     },
 
     addStudent: async (classId, studentName) => {
-        if (classId === 'c-sample') return;
         try {
-            const { data, error } = await supabase
-                .from('report_students')
+            const { error } = await supabase
+                .from('students_list')
                 .insert([{ class_id: classId, name: studentName }])
                 .select()
                 .single();
@@ -142,10 +153,9 @@ export const useReportStore = create<ReportStore>((set, get) => ({
     },
 
     deleteStudent: async (classId, studentId) => {
-        if (classId === 'c-sample') return;
         try {
             const { error } = await supabase
-                .from('report_students')
+                .from('students_list')
                 .delete()
                 .eq('id', studentId);
 
@@ -156,62 +166,80 @@ export const useReportStore = create<ReportStore>((set, get) => ({
         }
     },
 
-    updateStudentReport: async (classId, studentId, reportContent) => {
-        if (classId === 'c-sample') {
-            set((state) => ({
-                classes: state.classes.map(c =>
-                    c.id === classId
-                        ? {
-                            ...c,
-                            students: c.students.map(s =>
-                                s.id === studentId
-                                    ? { ...s, report: { ...s.report, ...reportContent } }
-                                    : s
-                            )
-                        }
-                        : c
-                )
-            }));
-            return;
-        }
-
+    saveReportTemplate: async (classId, reportType, templateHtml) => {
         try {
-            const updatePayload: any = {};
-            if (reportContent.dailyHtml !== undefined) updatePayload.daily_html = reportContent.dailyHtml;
-            if (reportContent.dailyLink !== undefined) updatePayload.daily_link = reportContent.dailyLink;
-            if (reportContent.weeklyHtml !== undefined) updatePayload.weekly_html = reportContent.weeklyHtml;
-            if (reportContent.weeklyLink !== undefined) updatePayload.weekly_link = reportContent.weeklyLink;
-            if (reportContent.monthlyHtml !== undefined) updatePayload.monthly_html = reportContent.monthlyHtml;
-            if (reportContent.monthlyLink !== undefined) updatePayload.monthly_link = reportContent.monthlyLink;
-
+            // Upsert template (requires unique constraint on class_id, report_type)
             const { error } = await supabase
-                .from('report_students')
-                .update(updatePayload)
-                .eq('id', studentId);
-
+                .from('report_templates')
+                .upsert(
+                    { class_id: classId, report_type: reportType, template_html: templateHtml },
+                    { onConflict: 'class_id,report_type' }
+                );
             if (error) throw error;
-
-            // update local state optimistically
-            set((state) => ({
-                classes: state.classes.map(c =>
-                    c.id === classId
-                        ? {
-                            ...c,
-                            students: c.students.map(s =>
-                                s.id === studentId
-                                    ? { ...s, report: { ...s.report, ...reportContent } }
-                                    : s
-                            )
-                        }
-                        : c
-                )
-            }));
+            await get().fetchData();
         } catch (error) {
-            console.error('Error updating student report:', error);
+            console.error('Error saving template:', error);
         }
     },
 
-    seedSampleData: () => {
-        // Now handled by fetchData inserting the sample class at the beginning
+    fetchStudentReports: async (studentId) => {
+        try {
+            const { data, error } = await supabase
+                .from('student_reports')
+                .select('*')
+                .eq('student_id', studentId)
+                .order('published_date', { ascending: false });
+
+            if (error) throw error;
+
+            return (data || []).map((r: any) => ({
+                id: r.id,
+                studentId: r.student_id,
+                reportType: r.report_type,
+                publishedDate: r.published_date,
+                finalHtml: r.final_html,
+                rawDataJson: r.raw_data_json,
+                createdAt: r.created_at
+            }));
+
+        } catch (error) {
+            console.error('Error fetching student reports:', error);
+            return [];
+        }
+    },
+
+    saveStudentReport: async (studentId, reportType, publishedDate, finalHtml, rawDataJson) => {
+        try {
+            // Upsert based on student_id, report_type, and published_date so we can overwrite the same day
+            // Actually, we don't have a unique constraint on those three, so we will just check if it exists first
+            const { data: existing } = await supabase
+                .from('student_reports')
+                .select('id')
+                .eq('student_id', studentId)
+                .eq('report_type', reportType)
+                .eq('published_date', publishedDate)
+                .single();
+
+            if (existing) {
+                const { error } = await supabase
+                    .from('student_reports')
+                    .update({ final_html: finalHtml, raw_data_json: rawDataJson })
+                    .eq('id', existing.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('student_reports')
+                    .insert([{
+                        student_id: studentId,
+                        report_type: reportType,
+                        published_date: publishedDate,
+                        final_html: finalHtml,
+                        raw_data_json: rawDataJson
+                    }]);
+                if (error) throw error;
+            }
+        } catch (error) {
+            console.error('Error saving student report:', error);
+        }
     }
 }));
