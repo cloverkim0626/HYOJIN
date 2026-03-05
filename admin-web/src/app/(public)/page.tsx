@@ -111,8 +111,13 @@ const App = () => {
                 {/* ── Header ── */}
                 <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm' : 'bg-transparent py-5'}`}>
                     <div className="px-6 flex justify-between items-center max-w-5xl mx-auto">
-                        <h1 className="text-xl sm:text-2xl font-black tracking-tighter drop-shadow-sm">
-                            <Typewriter text="김효진 영어" delay={500} loop={true} textClass="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 bg-clip-text text-transparent" />
+                        <h1 className="text-xl sm:text-2xl font-black tracking-tighter drop-shadow-sm relative">
+                            <Typewriter text="김효진 영어" delay={500} loop={true} textClass="bg-gradient-to-r from-blue-700 via-blue-400 to-indigo-800 bg-clip-text text-transparent relative z-10" />
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
+                                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                            />
                         </h1>
                         <div className="flex items-center gap-3">
                             <motion.div
@@ -240,14 +245,21 @@ const HomeSection = () => {
                     </motion.p>
 
                     <motion.h2
-                        initial={{ scale: 0.96, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                        className="text-3xl font-extrabold leading-tight tracking-tight mb-2 text-slate-900"
+                        initial={{ scale: 0.96, opacity: 0, filter: 'blur(12px)' }}
+                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+                        transition={{ duration: 3.5, delay: 0.8, ease: "easeOut" }}
+                        className="text-3xl font-extrabold leading-tight tracking-tight mb-2 text-slate-900 relative"
                     >
                         필연적 정답을 설계하는<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600">
-                            고해상도 영어
+                        <span className="relative inline-block">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-400 to-indigo-600">
+                                고해상도 영어
+                            </span>
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay"
+                                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                                transition={{ repeat: Infinity, duration: 3, ease: "linear", delay: 2 }}
+                            />
                         </span>
                     </motion.h2>
                 </div>
@@ -265,15 +277,21 @@ const HomeSection = () => {
                     <div className="relative z-10 w-full flex justify-center mt-4">
 
                         {/* 명예의 전당 (좌측 독립 트로피) */}
-                        <div className="absolute left-4 sm:left-12 top-1/2 -translate-y-1/2 z-20 hidden sm:flex flex-col items-center">
+                        {/* 명예의 전당 (좌측 독립 트로피) */}
+                        <div className="absolute left-[10%] sm:left-[22%] top-1/2 -translate-y-1/2 z-20 hidden sm:flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
                                 className="group flex flex-col items-center justify-center transition-transform hover:scale-110 duration-300"
                             >
-                                <div className="text-[50px] drop-shadow-[0_0_15px_rgba(250,204,21,0.6)] group-hover:drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] transition-all">
-                                    🏆
+                                <div className="relative w-[85px] h-[85px] transition-all group-hover:scale-110">
+                                    <Image
+                                        src="/images/hof_icon_nobg.png"
+                                        alt="Hall of Fame"
+                                        fill
+                                        className="object-contain transition-all"
+                                    />
                                 </div>
-                                <span className="mt-2 text-xs font-black text-yellow-400 drop-shadow-md tracking-wider border-b border-yellow-400/30 pb-0.5">명예의 전당</span>
+                                <span className="mt-1 text-[13px] font-medium text-yellow-700/80 tracking-widest italic" style={{ fontFamily: "'Playfair Display', serif" }}>Hall of Fame</span>
                             </button>
                         </div>
 
@@ -291,23 +309,29 @@ const HomeSection = () => {
                         </div>
 
                         {/* 모바일 뷰 전용 명예의 전당 */}
-                        <div className="absolute left-2 top-8 z-20 sm:hidden flex flex-col items-center">
+                        {/* 모바일 뷰 전용 명예의 전당 */}
+                        <div className="absolute left-[12%] top-16 z-20 sm:hidden flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
                                 className="group flex flex-col items-center justify-center transition-transform hover:scale-110 duration-300"
                             >
-                                <div className="text-[36px] drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
-                                    🏆
+                                <div className="relative w-[60px] h-[60px]">
+                                    <Image
+                                        src="/images/hof_icon_nobg.png"
+                                        alt="Hall of Fame"
+                                        fill
+                                        className="object-contain"
+                                    />
                                 </div>
-                                <span className="mt-1 text-[9px] font-black text-yellow-400 drop-shadow-md tracking-wider bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm">명예의 전당</span>
+                                <span className="mt-1 text-[10px] font-medium text-yellow-600/80 tracking-widest italic" style={{ fontFamily: "'Playfair Display', serif" }}>Hall of Fame</span>
                             </button>
                         </div>
                     </div>
 
                     <div className="w-full text-center space-y-4 relative z-10 px-4 mt-6">
                         <h3 className="text-slate-900 font-extrabold text-[22px] sm:text-2xl leading-snug mb-4 tracking-tight">
-                            대형강의에 끼워맞추는 수업은 <span className="text-blue-600">No.</span><br />
-                            정체된 영어성적 원인부터 찾아야 합니다.
+                            대형강의에 나를 끼워맞추는 공부는 <span className="text-blue-600 whitespace-nowrap">이제 그만.</span><br /><br />
+                            정체된 영어성적,<br className="sm:hidden" /> 원인부터 찾아야 합니다.
                         </h3>
                         <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
                             <span className="text-slate-700">개별 진단</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-slate-700">맞춤 커리큘럼</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-blue-700 font-bold tracking-wide">[낭비 없는 고득점]</span>
@@ -316,9 +340,16 @@ const HomeSection = () => {
                         {/* 이력 보기 버튼 */}
                         <button
                             onClick={() => setIsBioModalOpen(true)}
-                            className="mt-8 w-full max-w-sm mx-auto py-3.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-50 hover:-translate-y-0.5 transition-all shadow-sm"
+                            className="mt-6 w-full max-w-[340px] mx-auto py-4 bg-gradient-to-r from-[#e5e7eb] via-[#f3f4f6] to-[#d1d5db] text-slate-700 rounded-2xl text-base font-black flex items-center justify-center gap-2 hover:-translate-y-1 transition-all shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] relative overflow-hidden group border border-white/40"
                         >
-                            <GraduationCap size={18} className="text-blue-600" /> 강사 이력 및 약력 보기
+                            <span className="relative z-10 flex items-center gap-2 opacity-90">
+                                <GraduationCap size={20} className="text-slate-600" /> 강사 이력 및 약력 보기
+                            </span>
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
+                                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                                transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+                            />
                         </button>
                     </div>
                 </div>
@@ -453,21 +484,52 @@ const HomeSection = () => {
                         href="https://genie-text.vercel.app/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-center justify-between w-full max-w-sm mx-auto p-4 rounded-2xl border border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 transition-all shadow-md"
+                        className="group relative flex items-center justify-between w-full max-w-[340px] mx-auto p-4 rounded-[2rem] border border-indigo-500/5 bg-gradient-to-br from-[#0a091a] via-[#0b0a1a] to-[#0a091a] hover:border-indigo-400/20 transition-all shadow-xl overflow-hidden mt-1"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl border border-blue-100 shadow-sm">
-                                🌌
+                        {/* Starry universe background - More understated */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(79,70,229,0.05),transparent_95%)]" />
+
+                            {/* Refined Stars */}
+                            {[...Array(10)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="absolute w-[1px] h-[1px] bg-indigo-300 rounded-full animate-twinkle"
+                                    style={{
+                                        top: `${Math.random() * 100}%`,
+                                        left: `${Math.random() * 100}%`,
+                                        animationDelay: `${Math.random() * 5}s`,
+                                        animationDuration: `${4 + Math.random() * 2}s`,
+                                        opacity: Math.random() * 0.3 + 0.1
+                                    }}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="relative z-10 flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-[1rem] bg-slate-900/50 backdrop-blur-3xl flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform duration-700 overflow-hidden relative">
+                                <Image
+                                    src="/images/space_planet_icon.png"
+                                    alt="Planet"
+                                    fill
+                                    className="object-cover opacity-80"
+                                />
                             </div>
                             <div className="text-left">
-                                <p className="text-base font-bold text-blue-900 tracking-wide" style={{ fontFamily: "'Playfair Display', serif" }}>Text Universe</p>
-                                <p className="text-[10px] text-slate-500 font-medium">
-                                    학생 복습용 앱 · 구경하기
-                                    <span className="text-rose-500 font-bold ml-1 tracking-tighter">*PC에서 확인해 주세요.</span>
-                                </p>
+                                <p className="text-[19px] font-medium text-indigo-50/80 tracking-tight leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Text Universe</p>
+                                <div className="mt-0.5 space-y-0.5">
+                                    <p className="text-[10px] text-indigo-200/40 font-medium tracking-tight">
+                                        효진T 학생전용 복습용 어플 · 구경하기
+                                    </p>
+                                    <p className="text-[10px] text-rose-500/70 font-bold tracking-tighter">
+                                        *PC에서 확인해 주세요.
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <ExternalLink size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <div className="relative z-10 w-9 h-9 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-all duration-500">
+                            <ExternalLink size={16} className="text-indigo-400 group-hover:text-white transition-colors" />
+                        </div>
                     </a>
                 </div>
             </div>

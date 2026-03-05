@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportStore } from '@/store/reportStore';
 import { supabase } from '@/lib/supabase';
-import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet } from 'lucide-react';
+import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -107,6 +107,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     // When date or report type changes, try loading existing report
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = e.target.value;
+        setFormData(prev => ({ ...prev, published_date: newDate }));
+        loadExistingReport(existingReports, newDate, reportType);
+    };
+
+    const handlePrevDay = () => {
+        const current = new Date(formData.published_date);
+        current.setDate(current.getDate() - 1);
+        const newDate = current.toISOString().split('T')[0];
+        setFormData(prev => ({ ...prev, published_date: newDate }));
+        loadExistingReport(existingReports, newDate, reportType);
+    };
+
+    const handleNextDay = () => {
+        const current = new Date(formData.published_date);
+        current.setDate(current.getDate() + 1);
+        const newDate = current.toISOString().split('T')[0];
         setFormData(prev => ({ ...prev, published_date: newDate }));
         loadExistingReport(existingReports, newDate, reportType);
     };
@@ -461,7 +477,21 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     <FormSection icon={<Calendar size={16} />} title="발행 일자 설정">
                                         <div>
                                             <label className="block text-xs text-slate-400 mb-1">리포트 발행일 (날짜를 바꾸면 해당 날짜의 기존 리포트를 자동으로 불러옵니다)</label>
-                                            <input type="date" name="published_date" value={formData.published_date} onChange={handleDateChange} className="input-field" />
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={handlePrevDay}
+                                                    className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"
+                                                >
+                                                    <ChevronLeft size={20} />
+                                                </button>
+                                                <input type="date" name="published_date" value={formData.published_date} onChange={handleDateChange} className="input-field flex-1" />
+                                                <button
+                                                    onClick={handleNextDay}
+                                                    className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"
+                                                >
+                                                    <ChevronRight size={20} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </FormSection>
 
