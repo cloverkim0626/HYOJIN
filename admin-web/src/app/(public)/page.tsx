@@ -929,77 +929,68 @@ const ReportSection = () => {
                     )}
 
                     {step === 'view' && activeStudent && (
-                        <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+                        <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
 
-                            {/* Magazine Header Style Invitation */}
-                            <div className="border-b-2 border-slate-900 pb-5 pt-2">
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-700 mb-1">Weekly Insight & Progress</p>
-                                        <h2 className="text-2xl font-black text-slate-900 leading-none">
-                                            {activeStudent.name} <span className="font-light text-slate-400">STUDENT</span>
-                                        </h2>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-bold text-slate-500">{activeClass?.name}</p>
-                                        <p className="text-[10px] font-medium text-slate-400">Status: Updated</p>
-                                    </div>
-                                </div>
-                                <div className="mt-6 bg-slate-50 p-4 rounded-lg border border-slate-100 italic text-slate-600 text-sm">
-                                    "안녕하세요, <span className="font-bold text-slate-900">{activeStudent.name} 학부모님!</span> 우독학원 효진T 입니다.
-                                    오늘의 학습 성취도를 보고드립니다."
-                                </div>
+                            {/* Clean Professional Greeting */}
+                            <div className="pt-4 text-center">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+                                    {activeStudent.name} <span className="font-medium text-slate-400">학습 리포트</span>
+                                </h2>
+                                <p className="text-sm text-slate-500 italic">
+                                    "안녕하세요 학부모님! 오늘의 학습 성취도를 보고드립니다."
+                                </p>
                             </div>
 
-                            {/* Industrial Toggle Style */}
-                            <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-lg">
-                                {(['daily', 'weekly', 'monthly'] as const).map(type => (
+                            {/* Refined Navigation & Type Selection */}
+                            <div className="space-y-3 px-1">
+                                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                                    {(['daily', 'weekly', 'monthly'] as const).map(type => (
+                                        <button
+                                            key={type}
+                                            onClick={() => {
+                                                setReportType(type);
+                                                setCurrentReportIndex(0);
+                                            }}
+                                            className={`py-3 text-[11px] font-black tracking-tight uppercase transition-all rounded-lg ${reportType === type
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-2 py-1 shadow-sm">
                                     <button
-                                        key={type}
-                                        onClick={() => {
-                                            setReportType(type);
-                                            setCurrentReportIndex(0);
-                                        }}
-                                        className={`py-2.5 text-[11px] font-black tracking-tighter uppercase transition-all ${reportType === type
-                                            ? 'bg-white text-slate-900 rounded-[4px]'
-                                            : 'text-slate-500 hover:text-white'
-                                            }`}
+                                        onClick={handlePrevReport}
+                                        disabled={currentReportIndex >= sortedReports.length - 1}
+                                        className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
                                     >
-                                        {type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly'}
+                                        <ChevronRight size={22} className="rotate-180" />
                                     </button>
-                                ))}
-                            </div>
 
-                            {/* Date Navigation - Ultra Minimal */}
-                            <div className="flex items-center justify-between border-y border-slate-100 py-3">
-                                <button
-                                    onClick={handlePrevReport}
-                                    disabled={currentReportIndex >= sortedReports.length - 1}
-                                    className="p-1 text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
-                                >
-                                    <ChevronRight size={24} className="rotate-180" />
-                                </button>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xs font-black text-slate-900 mb-0.5">
+                                            {activeReport ? activeReport.publishedDate : 'NO DATA'}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                            Vol.{sortedReports.length - currentReportIndex} / {sortedReports.length}
+                                        </span>
+                                    </div>
 
-                                <div className="text-center">
-                                    <div className="text-xs font-black text-slate-900 tracking-widest uppercase mb-0.5">
-                                        {activeReport ? activeReport.publishedDate : 'No Record'}
-                                    </div>
-                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        Archive {sortedReports.length - currentReportIndex} of {sortedReports.length}
-                                    </div>
+                                    <button
+                                        onClick={handleNextReport}
+                                        disabled={currentReportIndex === 0}
+                                        className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
+                                    >
+                                        <ChevronRight size={22} />
+                                    </button>
                                 </div>
-
-                                <button
-                                    onClick={handleNextReport}
-                                    disabled={currentReportIndex === 0}
-                                    className="p-1 text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
-                                >
-                                    <ChevronRight size={24} />
-                                </button>
                             </div>
 
-                            {/* Report Canvas */}
-                            <div className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] relative overflow-hidden flex justify-center border border-slate-50">
+                            {/* Main Report Container */}
+                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
                             </div>
 
