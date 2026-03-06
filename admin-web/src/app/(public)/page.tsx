@@ -1012,7 +1012,7 @@ const ReportSection = () => {
                                                 setReportType(type);
                                                 setCurrentReportIndex(0);
                                             }}
-                                            className={`py-3 text-[11px] font-black tracking-tight uppercase transition-all rounded-lg ${reportType === type
+                                            className={`py-4 text-[11px] font-black tracking-tight uppercase transition-all rounded-lg ${reportType === type
                                                 ? 'bg-white text-slate-900 shadow-sm'
                                                 : 'text-slate-400 hover:text-slate-600'
                                                 }`}
@@ -1022,7 +1022,7 @@ const ReportSection = () => {
                                     ))}
                                 </div>
 
-                                <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-2 py-1 shadow-sm">
+                                <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-2 py-3 shadow-sm">
                                     <button
                                         onClick={handlePrevReport}
                                         disabled={currentReportIndex >= sortedReports.length - 1}
@@ -1052,7 +1052,7 @@ const ReportSection = () => {
 
                             {/* Main Report Container */}
                             <div className="mt-8" />
-                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
+                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100 [&_.hd-tag]:text-transparent [&_.hd-tag]:select-none">
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
                             </div>
 
