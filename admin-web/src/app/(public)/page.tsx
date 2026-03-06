@@ -309,8 +309,7 @@ const HomeSection = () => {
                         </div>
 
                         {/* 모바일 뷰 전용 명예의 전당 */}
-                        {/* 모바일 뷰 전용 명예의 전당 */}
-                        <div className="absolute left-[12%] top-16 z-20 sm:hidden flex flex-col items-center">
+                        <div className="absolute left-2 top-2 z-20 sm:hidden flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
                                 className="group flex flex-col items-center justify-center transition-transform hover:scale-110 duration-300"
@@ -887,8 +886,6 @@ const ReportSection = () => {
     return (
         <SectionWrapper>
             <div className="py-8 min-h-[60vh]">
-                <h2 className="text-2xl font-bold mb-2">Student Report</h2>
-                <p className="text-sm text-slate-500 mb-8">내 아이의 학습 분석 리포트</p>
 
                 <AnimatePresence mode="wait">
 
@@ -997,11 +994,12 @@ const ReportSection = () => {
                             <div className="pt-8 pb-4 text-center">
                                 <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                                    안녕하세요, <span className="text-blue-600 underline decoration-blue-100 underline-offset-4">{activeStudent.name}</span> 학부모님!
+                                    안녕하세요,<br /><span className="text-blue-600 underline decoration-blue-100 underline-offset-4">{activeStudent.name}</span> 학부모님!
                                 </h2>
                                 <p className="mt-4 text-slate-500 font-medium italic">
                                     "오늘의 성취도를 정성껏 분석해 보고드립니다."
                                 </p>
+                                <div className="mt-8" />
                             </div>
 
                             {/* Refined Navigation & Type Selection */}
@@ -1053,6 +1051,7 @@ const ReportSection = () => {
                             </div>
 
                             {/* Main Report Container */}
+                            <div className="mt-8" />
                             <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
                             </div>
