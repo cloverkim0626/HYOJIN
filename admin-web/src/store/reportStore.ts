@@ -44,7 +44,7 @@ interface ReportStore {
     deleteStudent: (classId: string, studentId: string) => Promise<void>;
     saveReportTemplate: (classId: string, reportType: 'daily' | 'weekly' | 'monthly', templateHtml: string) => Promise<void>;
     fetchStudentReports: (studentId: string) => Promise<StudentReport[]>;
-    saveStudentReport: (studentId: string, reportType: 'daily' | 'weekly' | 'monthly', publishedDate: string, finalHtml: string, rawDataJson: any) => Promise<void>;
+    saveStudentReport: (studentId: string, reportType: 'daily' | 'weekly' | 'monthly', publishedDate: string, finalHtml: string, rawDataJson: any) => Promise<boolean>;
     deleteStudentReport: (reportId: string) => Promise<void>;
 }
 
@@ -247,8 +247,6 @@ export const useReportStore = create<ReportStore>((set, get) => ({
 
     saveStudentReport: async (studentId, reportType, publishedDate, finalHtml, rawDataJson) => {
         try {
-            // Upsert based on student_id, report_type, and published_date so we can overwrite the same day
-            // Actually, we don't have a unique constraint on those three, so we will just check if it exists first
             const { data: existing } = await supabase
                 .from('student_reports')
                 .select('id')
@@ -275,8 +273,10 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                     }]);
                 if (error) throw error;
             }
+            return true;
         } catch (error) {
             console.error('Error saving student report:', error);
+            return false;
         }
     },
 

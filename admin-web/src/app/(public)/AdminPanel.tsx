@@ -228,6 +228,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const handleSaveAllReports = async () => {
         if (!activeClass) return;
         setIsSaving(true);
+        let successCount = 0;
+        const failedStudents: string[] = [];
 
         const d = new Date(sharedForm.published_date);
         const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
@@ -366,11 +368,20 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 }))
             };
 
-            await saveStudentReport(student.id, reportType, sharedForm.published_date, templateHtml, rawData);
+            const result = await saveStudentReport(student.id, reportType, sharedForm.published_date, templateHtml, rawData);
+            if (!result) {
+                failedStudents.push(student.name);
+            } else {
+                successCount++;
+            }
         }
 
         setIsSaving(false);
-        alert(`${activeClass.students.length}명의 리포트가 성공적으로 저장되었습니다!`);
+        if (failedStudents.length > 0) {
+            alert(`⚠️ ${failedStudents.join(', ')} 학생의 리포트 저장에 실패했습니다. 콘솔을 확인하세요.`);
+        } else {
+            alert(`✅ ${successCount}명의 리포트가 성공적으로 저장되었습니다!`);
+        }
     };
 
     // --- Login ---
@@ -485,6 +496,47 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
                             <div className="flex-1 overflow-y-auto p-6 md:p-8">
                                 <div className="max-w-4xl mx-auto space-y-8 pb-32">
+
+                                    {/* === PER-STUDENT: Attendance + Comment (2-column grid) === */}
+                                    <h4 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                                        <Users size={16} /> 출결 / 코멘트 ({activeClass.students.length}명)
+                                    </h4>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {activeClass.students.map(student => {
+                                            const sf = studentForms[student.id] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
+                                            return (
+                                                <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-xl p-3 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <h5 className="text-xs font-bold text-white">{student.name}</h5>
+                                                        <div className="flex items-center gap-2">
+                                                            <select value={sf.attendance_status} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_status: e.target.value }))}
+                                                                className="bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500">
+                                                                <option value="정상 등원 완료">●정상</option>
+                                                                <option value="지각">▲지각</option>
+                                                                <option value="결석">■결석</option>
+                                                            </select>
+                                                            <button onClick={() => openReportHistory(student.id)} className="text-[9px] text-blue-400 hover:text-blue-300 border border-blue-500/20 px-1.5 py-0.5 rounded">기록</button>
+                                                        </div>
+                                                    </div>
+                                                    {sf.attendance_status === '지각' && (
+                                                        <div className="flex gap-2">
+                                                            <input type="time" value={sf.attendance_time} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_time: e.target.value }))}
+                                                                className="flex-1 bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
+                                                            <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
+                                                                placeholder="사유" className="flex-1 bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
+                                                        </div>
+                                                    )}
+                                                    {sf.attendance_status === '결석' && (
+                                                        <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
+                                                            placeholder="결석 사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
+                                                    )}
+                                                    <textarea value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
+                                                        rows={3} placeholder="개별 코멘트..." className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500 resize-none" />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
 
                                     {/* === SHARED SECTION === */}
                                     <div className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 space-y-6">
@@ -656,48 +708,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </div>
 
-                                    {/* === PER-STUDENT: Attendance + Comment only === */}
-                                    <h4 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2 pt-4">
-                                        <Users size={16} /> 학생별 출결 / 코멘트 ({activeClass.students.length}명)
-                                    </h4>
-
-                                    {activeClass.students.map(student => {
-                                        const sf = studentForms[student.id] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
-                                        return (
-                                            <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-2xl p-4 space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <h5 className="text-sm font-bold text-white">{student.name}</h5>
-                                                    <button onClick={() => openReportHistory(student.id)} className="text-[10px] text-blue-400 hover:text-blue-300 border border-blue-500/20 px-2 py-1 rounded-md">기록</button>
-                                                </div>
-                                                <div className="grid grid-cols-12 gap-2">
-                                                    <div className="col-span-3">
-                                                        <select value={sf.attendance_status} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_status: e.target.value }))}
-                                                            className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500">
-                                                            <option value="정상 등원 완료">●정상</option>
-                                                            <option value="지각">▲지각</option>
-                                                            <option value="결석">■결석</option>
-                                                        </select>
-                                                    </div>
-                                                    {sf.attendance_status === '지각' && (
-                                                        <div className="col-span-3">
-                                                            <input type="time" value={sf.attendance_time} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_time: e.target.value }))}
-                                                                className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
-                                                        </div>
-                                                    )}
-                                                    {(sf.attendance_status === '지각' || sf.attendance_status === '결석') && (
-                                                        <div className="col-span-3">
-                                                            <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
-                                                                placeholder="사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
-                                                        </div>
-                                                    )}
-                                                    <div className={`${sf.attendance_status === '정상 등원 완료' ? 'col-span-9' : 'col-span-3'}`}>
-                                                        <input value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
-                                                            placeholder="개별 코멘트" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
 
                                 </div>
                             </div>
