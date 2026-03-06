@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportStore } from '@/store/reportStore';
 import { supabase } from '@/lib/supabase';
-import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck } from 'lucide-react';
+import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck, Download } from 'lucide-react';
 
 // --- Types ---
 const HW_STATUSES = ['확인완료', '교재미지참', '전체미완', '일부미완', '미완 후 보충완료'] as const;
@@ -41,6 +41,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingReports, setIsLoadingReports] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -222,6 +223,71 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             const reports = await fetchStudentReports(showReportHistory);
             setStudentReportsList(reports);
         }
+    };
+
+    // --- Load existing reports for current date ---
+    const handleLoadReports = async () => {
+        if (!activeClass) return;
+        setIsLoadingReports(true);
+
+        try {
+            let sharedLoaded = false;
+            const newStudentForms: Record<string, StudentFormData> = {};
+
+            for (const student of activeClass.students) {
+                const reports = await fetchStudentReports(student.id);
+                const matchingReport = reports.find(
+                    r => r.reportType === reportType && r.publishedDate === sharedForm.published_date
+                );
+
+                if (matchingReport?.rawDataJson) {
+                    const raw = matchingReport.rawDataJson;
+
+                    // Load shared form from the first student's data
+                    if (!sharedLoaded) {
+                        setSharedForm(prev => ({
+                            ...prev,
+                            lesson_content: raw.lesson_content || '',
+                            homeworks: (raw.homeworks && raw.homeworks.length > 0) ? raw.homeworks : [{ name: '' }],
+                            tests: (raw.tests && raw.tests.length > 0)
+                                ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false }))
+                                : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false }],
+                            test_images: raw.test_images || [],
+                            next_date_str: raw.next_date_str || '',
+                            next_content: raw.next_content || ''
+                        }));
+                        sharedLoaded = true;
+                    }
+
+                    // Load per-student data
+                    const hwCount = (raw.homeworks?.length) || sharedForm.homeworks.length;
+                    const testCount = (raw.tests?.length) || sharedForm.tests.length;
+                    newStudentForms[student.id] = {
+                        attendance_status: raw.attendance_status || '정상 등원 완료',
+                        attendance_time: raw.attendance_time || '',
+                        attendance_reason: raw.attendance_reason || '',
+                        hw_statuses: raw.hw_statuses ||
+                            Array.from({ length: hwCount }, (_, i) => ({
+                                status: raw.assignment_tracking?.[i]?.status || '확인완료',
+                                plan: raw.assignment_tracking?.[i]?.plan || ''
+                            })),
+                        test_scores: raw.test_scores ||
+                            Array.from({ length: testCount }, () => ({ score: '' })),
+                        teacher_comment: raw.teacher_comment || ''
+                    };
+                } else {
+                    // No report for this student on this date — use defaults
+                    newStudentForms[student.id] = defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
+                }
+            }
+
+            setStudentForms(newStudentForms);
+            alert(`✅ ${sharedForm.published_date} 리포트 데이터를 불러왔습니다.`);
+        } catch (err) {
+            console.error('Load error:', err);
+            alert('⚠️ 데이터 불러오기에 실패했습니다.');
+        }
+        setIsLoadingReports(false);
     };
 
     // --- Save All Reports (batch) ---
@@ -486,10 +552,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         <Users size={18} className="text-rose-400" />
                                         {activeClass.name} — 일괄 입력
                                     </h3>
-                                    <button onClick={handleSaveAllReports} disabled={isSaving}
-                                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-900/20 border border-emerald-400/20">
-                                        <Save size={16} /> {isSaving ? '저장 중...' : `전체 발행 (${activeClass.students.length}명)`}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={handleLoadReports} disabled={isLoadingReports}
+                                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-900/20 border border-blue-400/20">
+                                            <Download size={16} /> {isLoadingReports ? '불러오는 중...' : '불러오기'}
+                                        </button>
+                                        <button onClick={handleSaveAllReports} disabled={isSaving}
+                                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-900/20 border border-emerald-400/20">
+                                            <Save size={16} /> {isSaving ? '저장 중...' : `전체 발행 (${activeClass.students.length}명)`}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 bg-black p-1 rounded-lg">
                                     {(['daily', 'weekly', 'monthly'] as const).map(type => (
