@@ -253,7 +253,7 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                 .eq('student_id', studentId)
                 .eq('report_type', reportType)
                 .eq('published_date', publishedDate)
-                .single();
+                .maybeSingle();
 
             if (existing) {
                 const { error } = await supabase

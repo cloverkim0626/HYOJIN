@@ -235,7 +235,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
         const formattedDate = !isNaN(d.getTime()) ? `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${days[d.getDay()]}` : sharedForm.published_date;
 
-        const template = activeClass.templates.find(t => t.reportType === reportType);
+        // Find template: first check current class, then fallback to any class with this template type
+        let template = activeClass.templates.find(t => t.reportType === reportType);
+        if (!template) {
+            for (const cls of classes) {
+                const fallback = cls.templates.find(t => t.reportType === reportType);
+                if (fallback) { template = fallback; break; }
+            }
+        }
         const baseTemplate = template?.templateHtml || '<div style="text-align:center; padding: 40px;">반 템플릿이 설정되지 않았습니다.</div>';
 
         for (const student of activeClass.students) {
