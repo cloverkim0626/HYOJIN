@@ -45,6 +45,7 @@ interface ReportStore {
     saveReportTemplate: (classId: string, reportType: 'daily' | 'weekly' | 'monthly', templateHtml: string) => Promise<void>;
     fetchStudentReports: (studentId: string) => Promise<StudentReport[]>;
     saveStudentReport: (studentId: string, reportType: 'daily' | 'weekly' | 'monthly', publishedDate: string, finalHtml: string, rawDataJson: any) => Promise<void>;
+    deleteStudentReport: (reportId: string) => Promise<void>;
 }
 
 export const useReportStore = create<ReportStore>((set, get) => ({
@@ -276,6 +277,18 @@ export const useReportStore = create<ReportStore>((set, get) => ({
             }
         } catch (error) {
             console.error('Error saving student report:', error);
+        }
+    },
+
+    deleteStudentReport: async (reportId) => {
+        try {
+            const { error } = await supabase
+                .from('student_reports')
+                .delete()
+                .eq('id', reportId);
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error deleting student report:', error);
         }
     }
 }));

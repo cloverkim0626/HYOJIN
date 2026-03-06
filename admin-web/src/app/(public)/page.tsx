@@ -813,6 +813,11 @@ const ReportSection = () => {
     // Viewer state
     const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
+    // Calendar modal state
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
+    const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+
     let activeClass = classes.find(c => c.id === selectedClassId);
     let activeStudent = activeClass?.students.find(s => s.id === selectedStudentId);
 
@@ -866,6 +871,34 @@ const ReportSection = () => {
 
     const activeReport = sortedReports[currentReportIndex];
     let currentReportHtml = activeReport?.finalHtml || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
+
+    // Calendar helper: find incomplete assignments from all reports
+    const getIncompleteAssignments = () => {
+        const incompleteMap: Record<string, { name: string; status: string; plan: string }[]> = {};
+        studentReports.forEach(report => {
+            const raw = report.rawDataJson;
+            if (raw?.assignment_tracking) {
+                const incompletes = raw.assignment_tracking.filter((a: any) =>
+                    a.status === '교재미지참' || a.status === '전체미완' || a.status === '일부미완'
+                );
+                if (incompletes.length > 0) {
+                    incompleteMap[report.publishedDate] = incompletes;
+                }
+            }
+        });
+        return incompleteMap;
+    };
+
+    const incompleteMap = showCalendar ? getIncompleteAssignments() : {};
+
+    // Calendar rendering helpers
+    const calendarYear = calendarMonth.getFullYear();
+    const calendarMonthIdx = calendarMonth.getMonth();
+    const daysInMonth = new Date(calendarYear, calendarMonthIdx + 1, 0).getDate();
+    const firstDayOfWeek = new Date(calendarYear, calendarMonthIdx, 1).getDay();
+    const calendarDays: (number | null)[] = [];
+    for (let i = 0; i < firstDayOfWeek; i++) calendarDays.push(null);
+    for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
     const handleNextReport = () => {
         if (currentReportIndex > 0) setCurrentReportIndex(prev => prev - 1);
@@ -991,7 +1024,13 @@ const ReportSection = () => {
                         <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
 
                             {/* Personal Premium Greeting */}
-                            <div className="pt-8 pb-4 text-center">
+                            <div className="pt-8 pb-4 text-center relative">
+                                {/* Calendar button */}
+                                <button onClick={() => { setShowCalendar(true); setCalendarMonth(new Date()); setSelectedCalendarDate(null); }}
+                                    className="absolute top-4 right-0 flex items-center gap-1 text-[10px] text-slate-400 hover:text-rose-500 border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg transition-colors">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                    과제현황
+                                </button>
                                 <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
                                     안녕하세요,<br /><span className="text-blue-600 underline decoration-blue-100 underline-offset-4">{activeStudent.name}</span> 학부모님!
@@ -1052,7 +1091,7 @@ const ReportSection = () => {
 
                             {/* Main Report Container */}
                             <div className="mt-8" />
-                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100 [&_.hd-tag]:text-transparent [&_.hd-tag]:select-none">
+                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden [&_.hd-tag]:text-transparent [&_.hd-tag]:select-none">
                                 <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
                             </div>
 
@@ -1066,6 +1105,69 @@ const ReportSection = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Monthly Calendar Modal */}
+                {showCalendar && (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCalendar(false)}>
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                                <button onClick={() => setCalendarMonth(new Date(calendarYear, calendarMonthIdx - 1, 1))} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+                                </button>
+                                <h3 className="font-bold text-slate-900">{calendarYear}년 {calendarMonthIdx + 1}월</h3>
+                                <button onClick={() => setCalendarMonth(new Date(calendarYear, calendarMonthIdx + 1, 1))} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+                                </button>
+                            </div>
+                            <div className="p-4">
+                                <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                                    {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+                                        <div key={d} className="text-[10px] font-bold text-slate-400">{d}</div>
+                                    ))}
+                                </div>
+                                <div className="grid grid-cols-7 gap-1">
+                                    {calendarDays.map((day, i) => {
+                                        if (day === null) return <div key={`e-${i}`} />;
+                                        const dateStr = `${calendarYear}-${String(calendarMonthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                        const hasIncomplete = !!incompleteMap[dateStr];
+                                        const isSelected = selectedCalendarDate === dateStr;
+                                        return (
+                                            <button key={day} onClick={() => setSelectedCalendarDate(isSelected ? null : dateStr)}
+                                                className={`relative w-full aspect-square flex items-center justify-center rounded-full text-xs font-medium transition-colors ${isSelected ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
+                                                {day}
+                                                {hasIncomplete && (
+                                                    <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            {selectedCalendarDate && incompleteMap[selectedCalendarDate] && (
+                                <div className="border-t border-slate-100 p-4 space-y-2 bg-red-50/50">
+                                    <p className="text-xs font-bold text-red-600 flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {selectedCalendarDate} 미완 과제
+                                    </p>
+                                    {incompleteMap[selectedCalendarDate].map((item: any, idx: number) => (
+                                        <div key={idx} className="bg-white rounded-lg p-2 border border-red-100">
+                                            <p className="text-xs font-semibold text-slate-900">{item.name}</p>
+                                            <p className="text-[10px] text-red-500 font-medium">{item.status}</p>
+                                            {item.plan && <p className="text-[10px] text-slate-500 mt-0.5">→ {item.plan}</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedCalendarDate && !incompleteMap[selectedCalendarDate] && (
+                                <div className="border-t border-slate-100 p-4">
+                                    <p className="text-xs text-slate-400 text-center">이 날짜에 미완 과제가 없습니다.</p>
+                                </div>
+                            )}
+                            <div className="p-3 border-t border-slate-100">
+                                <button onClick={() => setShowCalendar(false)} className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </SectionWrapper>
     );
