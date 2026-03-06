@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportStore } from '@/store/reportStore';
 import { supabase } from '@/lib/supabase';
-import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, AlertCircle } from 'lucide-react';
+import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck } from 'lucide-react';
 
 // --- Types ---
 const HW_STATUSES = ['확인완료', '교재미지참', '전체미완', '일부미완', '미완 후 보충완료'] as const;
@@ -12,9 +12,7 @@ interface StudentFormData {
     attendance_status: string;
     attendance_time: string;
     attendance_reason: string;
-    // Per-student homework statuses (indexed same as shared homeworks)
     hw_statuses: { status: HwStatus; plan: string }[];
-    // Per-student test scores (indexed same as shared tests)
     test_scores: { score: string; wordTestResult?: 'pass' | 'fail'; failAction?: '재시험 완료' | '추후 재시'; retestDate?: string }[];
     teacher_comment: string;
 }
@@ -23,7 +21,7 @@ interface SharedFormData {
     published_date: string;
     lesson_content: string;
     homeworks: { name: string }[];
-    tests: { name: string; desc: string; total: string; avg: string; isWordTest: boolean }[];
+    tests: { name: string; desc: string; total: string; cutline: string; isWordTest: boolean }[];
     test_images: string[];
     next_date_str: string;
     next_content: string;
@@ -47,7 +45,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { classes, fetchData, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport, fetchStudentReports, deleteStudentReport } = useReportStore();
-    const [existingReportsMap, setExistingReportsMap] = useState<Record<string, any[]>>({});
 
     React.useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -55,26 +52,30 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [newClassName, setNewClassName] = useState('');
     const [newStudentName, setNewStudentName] = useState('');
     const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-    const [showReportHistory, setShowReportHistory] = useState<string | null>(null); // studentId for history modal
+
+    // Report history modal
+    const [showReportHistory, setShowReportHistory] = useState<string | null>(null);
     const [studentReportsList, setStudentReportsList] = useState<any[]>([]);
 
-    // --- Shared form data (class-wide) ---
+    // Homework status modal
+    const [hwModalIdx, setHwModalIdx] = useState<number | null>(null);
+
+    // --- Shared form data ---
     const [sharedForm, setSharedForm] = useState<SharedFormData>({
         published_date: new Date().toISOString().split('T')[0],
         lesson_content: '',
         homeworks: [{ name: '' }],
-        tests: [{ name: '', desc: '', total: '', avg: '', isWordTest: false }],
+        tests: [{ name: '', desc: '', total: '', cutline: '', isWordTest: false }],
         test_images: [],
         next_date_str: '',
         next_content: ''
     });
 
-    // --- Per-student form data (keyed by student id) ---
+    // --- Per-student form data ---
     const [studentForms, setStudentForms] = useState<Record<string, StudentFormData>>({});
 
     const activeClass = classes.find(c => c.id === selectedClassId);
 
-    // Initialize student forms when class is selected
     const initStudentForms = (students: any[]) => {
         const forms: Record<string, StudentFormData> = {};
         students.forEach(s => {
@@ -86,31 +87,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const handleSelectClass = async (classId: string) => {
         setSelectedClassId(classId);
         const cls = classes.find(c => c.id === classId);
-        if (cls) {
-            initStudentForms(cls.students);
-            // Load existing reports for all students
-            const reportsMap: Record<string, any[]> = {};
-            for (const s of cls.students) {
-                reportsMap[s.id] = await fetchStudentReports(s.id);
-            }
-            setExistingReportsMap(reportsMap);
-        }
+        if (cls) initStudentForms(cls.students);
     };
 
-    // --- Sync hw/test counts when shared form changes ---
+    // --- Sync hw/test counts ---
     const syncStudentFormsToShared = (newHomeworks: { name: string }[], newTests: SharedFormData['tests']) => {
         setStudentForms(prev => {
             const updated = { ...prev };
             for (const sid of Object.keys(updated)) {
                 const existing = updated[sid];
-                // Sync homeworks
-                const newHwStatuses = newHomeworks.map((_, i) =>
-                    existing.hw_statuses[i] || { status: '확인완료' as HwStatus, plan: '' }
-                );
-                // Sync tests
-                const newTestScores = newTests.map((_, i) =>
-                    existing.test_scores[i] || { score: '' }
-                );
+                const newHwStatuses = newHomeworks.map((_, i) => existing.hw_statuses[i] || { status: '확인완료' as HwStatus, plan: '' });
+                const newTestScores = newTests.map((_, i) => existing.test_scores[i] || { score: '' });
                 updated[sid] = { ...existing, hw_statuses: newHwStatuses, test_scores: newTestScores };
             }
             return updated;
@@ -131,7 +118,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         if (sharedForm.homeworks.length <= 1) return;
         const newHw = sharedForm.homeworks.filter((_, i) => i !== idx);
         setSharedForm(prev => ({ ...prev, homeworks: newHw }));
-        // Also remove from student forms
         setStudentForms(prev => {
             const updated = { ...prev };
             for (const sid of Object.keys(updated)) {
@@ -147,7 +133,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     };
 
     const addTest = () => {
-        const newTests = [...sharedForm.tests, { name: '', desc: '', total: '', avg: '', isWordTest: false }];
+        const newTests = [...sharedForm.tests, { name: '', desc: '', total: '', cutline: '', isWordTest: false }];
         setSharedForm(prev => ({ ...prev, tests: newTests }));
         syncStudentFormsToShared(sharedForm.homeworks, newTests);
     };
@@ -175,6 +161,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             ...prev,
             [studentId]: updater(prev[studentId] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length))
         }));
+    };
+
+    // --- Auto-calculate average for a test (excluding blank scores) ---
+    const calcAvg = (testIdx: number): number => {
+        if (!activeClass) return 0;
+        const scores = activeClass.students
+            .map(s => studentForms[s.id]?.test_scores[testIdx]?.score)
+            .filter(s => s !== undefined && s !== '')
+            .map(s => parseFloat(s!));
+        if (scores.length === 0) return 0;
+        return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10;
     };
 
     // --- Date navigation ---
@@ -217,12 +214,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         setStudentReportsList(reports);
         setShowReportHistory(studentId);
     };
-    const handleDeleteReport = async (reportId: string, studentId: string) => {
+    const handleDeleteReport = async (reportId: string) => {
         if (!confirm('이 리포트를 삭제하시겠습니까?')) return;
         await deleteStudentReport(reportId);
-        const reports = await fetchStudentReports(studentId);
-        setStudentReportsList(reports);
-        setExistingReportsMap(prev => ({ ...prev, [studentId]: reports }));
+        // Refresh the list
+        if (showReportHistory) {
+            const reports = await fetchStudentReports(showReportHistory);
+            setStudentReportsList(reports);
+        }
     };
 
     // --- Save All Reports (batch) ---
@@ -249,9 +248,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 if (!hw.name) return;
                 const sts = sf.hw_statuses[idx];
                 if (!sts) return;
-                const badgeClass = sts.status === '확인완료' ? 'badge-blue' :
-                    sts.status === '미완 후 보충완료' ? 'badge-blue' :
-                        'badge-red';
+                const badgeClass = (sts.status === '확인완료' || sts.status === '미완 후 보충완료') ? 'badge-blue' : 'badge-red';
                 hwHtml += `
         <div style="margin-bottom: 12px;">
             <div class="status-wrap">
@@ -270,18 +267,28 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 if (!ts) return;
                 const scoreNowNum = parseFloat(ts.score) || 0;
                 const scoreTotalNum = parseFloat(test.total) || 100;
-                const avgScoreNum = parseFloat(test.avg) || 0;
+                const avgScore = calcAvg(idx);
                 const scorePercent = scoreTotalNum > 0 ? (scoreNowNum / scoreTotalNum) * 100 : 0;
-                const avgPercent = scoreTotalNum > 0 ? (avgScoreNum / scoreTotalNum) * 100 : 0;
-                const isBelowAvg = scoreNowNum < avgScoreNum;
+                const avgPercent = scoreTotalNum > 0 ? (avgScore / scoreTotalNum) * 100 : 0;
+                const isBelowAvg = scoreNowNum < avgScore;
 
-                // Word test fail info
+                // Auto-determine pass/fail for word tests
+                let wordTestResult = ts.wordTestResult;
+                if (test.isWordTest && test.cutline) {
+                    const cutlineNum = parseFloat(test.cutline) || 0;
+                    if (ts.score !== '') {
+                        wordTestResult = scoreNowNum >= cutlineNum ? 'pass' : 'fail';
+                    }
+                }
+
                 let wordTestInfo = '';
-                if (test.isWordTest && ts.wordTestResult === 'fail') {
+                if (test.isWordTest && wordTestResult === 'fail') {
                     if (ts.failAction === '재시험 완료') {
                         wordTestInfo = `<p style="font-size:12px;color:var(--point-red);font-weight:600;margin-top:8px;">※ Fail → 재시험 완료</p>`;
                     } else if (ts.failAction === '추후 재시') {
                         wordTestInfo = `<p style="font-size:12px;color:var(--point-red);font-weight:600;margin-top:8px;">※ Fail → 추후 재시험 예정${ts.retestDate ? ` (${ts.retestDate})` : ''}</p>`;
+                    } else {
+                        wordTestInfo = `<p style="font-size:12px;color:var(--point-red);font-weight:600;margin-top:8px;">※ Fail</p>`;
                     }
                 }
 
@@ -302,7 +309,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             </div>
             <div class="chart-info">
                 <span style="${isBelowAvg ? 'color:var(--point-red)' : ''}">${isBelowAvg ? '평균 대비 보완 필요' : '달성률: ' + scorePercent.toFixed(1) + '%'}</span>
-                <span>반 평균: ${test.avg}점</span>
+                <span>반 평균: ${avgScore}점</span>
             </div>
             ${wordTestInfo}
         </div>`;
@@ -325,6 +332,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             if ((sf.attendance_status === '지각' || sf.attendance_status === '결석') && sf.attendance_reason) attendanceDisplay += `\n사유: ${sf.attendance_reason}`;
 
             // Replace template variables
+            const avgScore0 = calcAvg(0);
             const variables: Record<string, string> = {
                 '{{student_name}}': student.name,
                 '{{class_name}}': activeClass.name.replace('[WOODOK] ', ''),
@@ -348,11 +356,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 templateHtml = templateHtml.split(key).join(value);
             }
 
-            // Build rawDataJson (includes assignment tracking data)
             const rawData = {
                 ...sharedForm,
                 ...sf,
-                // Structured assignment data for calendar tracking
                 assignment_tracking: sharedForm.homeworks.map((hw, idx) => ({
                     name: hw.name,
                     status: sf.hw_statuses[idx]?.status || '확인완료',
@@ -405,9 +411,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button disabled className="flex items-center gap-1.5 bg-white/5 text-slate-500 px-3 py-2 rounded-lg text-xs font-medium border border-white/5 cursor-not-allowed opacity-50" title="추후 활성화 예정">
-                        <FileSpreadsheet size={14} /> Excel Import
-                    </button>
+                    <button disabled className="flex items-center gap-1.5 bg-white/5 text-slate-500 px-3 py-2 rounded-lg text-xs font-medium border border-white/5 cursor-not-allowed opacity-50"><FileSpreadsheet size={14} /> Excel Import</button>
                     <button onClick={onClose} className="p-2 bg-white/5 rounded-lg text-slate-300 hover:bg-white/10 transition-colors"><X size={20} /></button>
                 </div>
             </header>
@@ -430,7 +434,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             </div>
                         ))}
                     </div>
-                    {/* Student management within selected class */}
                     {activeClass && (
                         <div className="border-t border-white/10 p-4">
                             <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">학생 관리</h3>
@@ -459,7 +462,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">반을 선택해주세요.</div>
                     ) : (
                         <>
-                            {/* Top bar */}
                             <div className="p-4 border-b border-white/10 bg-slate-900 shrink-0">
                                 <div className="flex justify-between items-center mb-3">
                                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -507,17 +509,23 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 placeholder="교과서 1과 예상문제 풀이 및 주요 어법 포인트 Review..." className="input-field resize-none" />
                                         </div>
 
-                                        {/* Homework names (shared) */}
+                                        {/* Homework names + status check button */}
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs text-slate-400">과제 목록 (과제명만 — 상태는 학생별)</label>
+                                                <label className="text-xs text-slate-400">과제 목록</label>
                                                 <button onClick={addHomework} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-md text-white transition-colors flex items-center gap-1"><Plus size={12} /> 추가</button>
                                             </div>
                                             <div className="space-y-2">
                                                 {sharedForm.homeworks.map((hw, idx) => (
-                                                    <div key={idx} className="flex gap-2">
+                                                    <div key={idx} className="flex gap-2 items-center">
                                                         <input value={hw.name} onChange={e => handleHwNameChange(idx, e.target.value)} placeholder={`과제 ${idx + 1} (예: 워크북 17~63p)`}
                                                             className="flex-1 bg-black border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
+                                                        {hw.name && (
+                                                            <button onClick={() => setHwModalIdx(idx)}
+                                                                className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
+                                                                <ClipboardCheck size={14} /> 체크
+                                                            </button>
+                                                        )}
                                                         {sharedForm.homeworks.length > 1 && (
                                                             <button onClick={() => removeHomework(idx)} className="text-slate-600 hover:text-rose-400 p-1"><X size={16} /></button>
                                                         )}
@@ -526,36 +534,91 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             </div>
                                         </div>
 
-                                        {/* Tests (shared config) */}
+                                        {/* Tests with inline student scores */}
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs text-slate-400">테스트 설정 (시험명/범위/만점/평균 — 점수는 학생별)</label>
+                                                <label className="text-xs text-slate-400">테스트 설정 + 학생별 점수</label>
                                                 <button onClick={addTest} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-md text-white transition-colors flex items-center gap-1"><Plus size={12} /> 추가</button>
                                             </div>
-                                            <div className="space-y-3">
-                                                {sharedForm.tests.map((test, idx) => (
-                                                    <div key={idx} className="bg-black border border-white/5 rounded-xl p-3 relative group">
-                                                        {sharedForm.tests.length > 1 && (
-                                                            <button onClick={() => removeTest(idx)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-400 hover:text-rose-400 p-1 rounded-full border border-slate-700 opacity-0 group-hover:opacity-100"><X size={12} /></button>
-                                                        )}
-                                                        <div className="grid grid-cols-12 gap-2">
-                                                            <div className="col-span-5">
-                                                                <input value={test.name} onChange={e => handleTestSharedChange(idx, 'name', e.target.value)} placeholder="시험명" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                            <div className="space-y-4">
+                                                {sharedForm.tests.map((test, idx) => {
+                                                    const avg = calcAvg(idx);
+                                                    return (
+                                                        <div key={idx} className="bg-black border border-white/5 rounded-xl p-4 relative group space-y-3">
+                                                            {sharedForm.tests.length > 1 && (
+                                                                <button onClick={() => removeTest(idx)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-400 hover:text-rose-400 p-1 rounded-full border border-slate-700 opacity-0 group-hover:opacity-100"><X size={12} /></button>
+                                                            )}
+                                                            {/* Test config row */}
+                                                            <div className="grid grid-cols-12 gap-2">
+                                                                <div className="col-span-4">
+                                                                    <input value={test.name} onChange={e => handleTestSharedChange(idx, 'name', e.target.value)} placeholder="시험명" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                                </div>
+                                                                <div className="col-span-3">
+                                                                    <input value={test.desc} onChange={e => handleTestSharedChange(idx, 'desc', e.target.value)} placeholder="범위" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                                </div>
+                                                                <div className="col-span-2">
+                                                                    <input value={test.total} onChange={e => handleTestSharedChange(idx, 'total', e.target.value)} placeholder="만점" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                                </div>
+                                                                <div className="col-span-3">
+                                                                    <input value={test.cutline} onChange={e => handleTestSharedChange(idx, 'cutline', e.target.value)} placeholder="커트라인" className="w-full bg-slate-900 border border-amber-500/20 rounded-lg px-2 py-1.5 text-xs text-amber-400 focus:outline-none focus:border-amber-500" />
+                                                                </div>
                                                             </div>
-                                                            <div className="col-span-4">
-                                                                <input value={test.desc} onChange={e => handleTestSharedChange(idx, 'desc', e.target.value)} placeholder="범위" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                            <div className="flex items-center justify-between">
+                                                                <label className="flex items-center gap-2 text-[10px] text-slate-500 cursor-pointer">
+                                                                    <input type="checkbox" checked={test.isWordTest} onChange={e => handleTestSharedChange(idx, 'isWordTest', e.target.checked)} className="rounded" />
+                                                                    단어 테스트 (커트라인 미달 시 자동 FAIL)
+                                                                </label>
+                                                                {test.name && <span className="text-[10px] text-emerald-400 font-bold">평균: {avg}점</span>}
                                                             </div>
-                                                            <div className="col-span-3 flex gap-1">
-                                                                <input value={test.total} onChange={e => handleTestSharedChange(idx, 'total', e.target.value)} placeholder="만점" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
-                                                                <input value={test.avg} onChange={e => handleTestSharedChange(idx, 'avg', e.target.value)} placeholder="평균" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
-                                                            </div>
+
+                                                            {/* Inline student scores */}
+                                                            {test.name && activeClass && (
+                                                                <div className="border-t border-white/5 pt-2 space-y-1">
+                                                                    {activeClass.students.map(student => {
+                                                                        const sf = studentForms[student.id];
+                                                                        const ts = sf?.test_scores[idx] || { score: '' };
+                                                                        const scoreNum = parseFloat(ts.score) || 0;
+                                                                        const cutlineNum = parseFloat(test.cutline) || 0;
+                                                                        const isFail = test.isWordTest && test.cutline && ts.score !== '' && scoreNum < cutlineNum;
+                                                                        return (
+                                                                            <div key={student.id} className="flex items-center gap-2">
+                                                                                <span className="text-[10px] text-slate-500 w-16 truncate">{student.name}</span>
+                                                                                <input type="number" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                    const newScores = [...prev.test_scores];
+                                                                                    newScores[idx] = { ...newScores[idx], score: e.target.value };
+                                                                                    return { ...prev, test_scores: newScores };
+                                                                                })} placeholder="—" className={`w-14 bg-slate-900 border rounded px-2 py-1 text-xs font-bold focus:outline-none ${isFail ? 'border-rose-500/40 text-rose-400' : 'border-white/5 text-emerald-400'} focus:border-rose-500`} />
+                                                                                {isFail && <span className="text-[9px] text-rose-400 font-bold">FAIL</span>}
+                                                                                {test.isWordTest && ts.score !== '' && !isFail && <span className="text-[9px] text-emerald-400 font-bold">PASS</span>}
+                                                                                {/* Fail actions for word test */}
+                                                                                {isFail && (
+                                                                                    <div className="flex items-center gap-1 ml-1">
+                                                                                        {(['재시험 완료', '추후 재시'] as const).map(action => (
+                                                                                            <button key={action} onClick={() => updateStudentForm(student.id, prev => {
+                                                                                                const newScores = [...prev.test_scores];
+                                                                                                newScores[idx] = { ...newScores[idx], failAction: action };
+                                                                                                return { ...prev, test_scores: newScores };
+                                                                                            })} className={`px-1.5 py-0.5 rounded text-[9px] border ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-800 border-white/5 text-slate-500'}`}>
+                                                                                                {action}
+                                                                                            </button>
+                                                                                        ))}
+                                                                                        {ts.failAction === '추후 재시' && (
+                                                                                            <input value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                                const newScores = [...prev.test_scores];
+                                                                                                newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
+                                                                                                return { ...prev, test_scores: newScores };
+                                                                                            })} placeholder="재시험일" className="w-16 bg-slate-900 border border-white/5 rounded px-1 py-0.5 text-[9px] focus:outline-none focus:border-rose-500" />
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <label className="flex items-center gap-2 mt-2 text-[10px] text-slate-500 cursor-pointer">
-                                                            <input type="checkbox" checked={test.isWordTest} onChange={e => handleTestSharedChange(idx, 'isWordTest', e.target.checked)} className="rounded" />
-                                                            단어 테스트 (pass/fail 적용)
-                                                        </label>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
 
@@ -593,150 +656,44 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </div>
 
-                                    {/* === PER-STUDENT CARDS === */}
+                                    {/* === PER-STUDENT: Attendance + Comment only === */}
                                     <h4 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2 pt-4">
-                                        <Users size={16} /> 학생별 개별 입력 ({activeClass.students.length}명)
+                                        <Users size={16} /> 학생별 출결 / 코멘트 ({activeClass.students.length}명)
                                     </h4>
 
                                     {activeClass.students.map(student => {
                                         const sf = studentForms[student.id] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
                                         return (
-                                            <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-2xl p-5 space-y-4">
+                                            <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-2xl p-4 space-y-3">
                                                 <div className="flex items-center justify-between">
-                                                    <h5 className="text-base font-bold text-white">{student.name}</h5>
-                                                    <button onClick={() => openReportHistory(student.id)} className="text-[10px] text-blue-400 hover:text-blue-300 border border-blue-500/20 px-2 py-1 rounded-md">리포트 기록</button>
+                                                    <h5 className="text-sm font-bold text-white">{student.name}</h5>
+                                                    <button onClick={() => openReportHistory(student.id)} className="text-[10px] text-blue-400 hover:text-blue-300 border border-blue-500/20 px-2 py-1 rounded-md">기록</button>
                                                 </div>
-
-                                                {/* Attendance */}
-                                                <div className="grid grid-cols-12 gap-3">
-                                                    <div className="col-span-4">
-                                                        <label className="block text-[10px] text-slate-500 mb-1">출결</label>
+                                                <div className="grid grid-cols-12 gap-2">
+                                                    <div className="col-span-3">
                                                         <select value={sf.attendance_status} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_status: e.target.value }))}
-                                                            className="w-full bg-black border border-white/5 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-rose-500">
+                                                            className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500">
                                                             <option value="정상 등원 완료">●정상</option>
                                                             <option value="지각">▲지각</option>
                                                             <option value="결석">■결석</option>
                                                         </select>
                                                     </div>
                                                     {sf.attendance_status === '지각' && (
-                                                        <div className="col-span-4">
-                                                            <label className="block text-[10px] text-slate-500 mb-1">등원시각</label>
+                                                        <div className="col-span-3">
                                                             <input type="time" value={sf.attendance_time} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_time: e.target.value }))}
-                                                                className="w-full bg-black border border-white/5 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-rose-500" />
+                                                                className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
                                                         </div>
                                                     )}
                                                     {(sf.attendance_status === '지각' || sf.attendance_status === '결석') && (
-                                                        <div className="col-span-4">
-                                                            <label className="block text-[10px] text-slate-500 mb-1">사유</label>
+                                                        <div className="col-span-3">
                                                             <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
-                                                                placeholder="사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-rose-500" />
+                                                                placeholder="사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
                                                         </div>
                                                     )}
-                                                </div>
-
-                                                {/* Per-student homework statuses */}
-                                                {sharedForm.homeworks.some(hw => hw.name) && (
-                                                    <div>
-                                                        <label className="block text-[10px] text-slate-500 mb-1">과제 상태</label>
-                                                        <div className="space-y-2">
-                                                            {sharedForm.homeworks.map((hw, idx) => {
-                                                                if (!hw.name) return null;
-                                                                const hs = sf.hw_statuses[idx] || { status: '확인완료' as HwStatus, plan: '' };
-                                                                const needsPlan = hs.status === '교재미지참' || hs.status === '전체미완' || hs.status === '일부미완';
-                                                                return (
-                                                                    <div key={idx} className="bg-black/50 rounded-lg p-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-[10px] text-slate-400 flex-1 truncate">{hw.name}</span>
-                                                                            <select value={hs.status} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                const newHw = [...prev.hw_statuses];
-                                                                                newHw[idx] = { ...newHw[idx], status: e.target.value as HwStatus };
-                                                                                return { ...prev, hw_statuses: newHw };
-                                                                            })} className="bg-slate-900 border border-white/5 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500 w-32">
-                                                                                {HW_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                                            </select>
-                                                                        </div>
-                                                                        {needsPlan && (
-                                                                            <input value={hs.plan} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                const newHw = [...prev.hw_statuses];
-                                                                                newHw[idx] = { ...newHw[idx], plan: e.target.value };
-                                                                                return { ...prev, hw_statuses: newHw };
-                                                                            })} placeholder="보완계획" className="w-full mt-1 bg-slate-900 border border-white/5 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
+                                                    <div className={`${sf.attendance_status === '정상 등원 완료' ? 'col-span-9' : 'col-span-3'}`}>
+                                                        <input value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
+                                                            placeholder="개별 코멘트" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500" />
                                                     </div>
-                                                )}
-
-                                                {/* Per-student test scores */}
-                                                {sharedForm.tests.some(t => t.name) && (
-                                                    <div>
-                                                        <label className="block text-[10px] text-slate-500 mb-1">테스트 점수</label>
-                                                        <div className="space-y-2">
-                                                            {sharedForm.tests.map((test, idx) => {
-                                                                if (!test.name) return null;
-                                                                const ts = sf.test_scores[idx] || { score: '' };
-                                                                return (
-                                                                    <div key={idx} className="bg-black/50 rounded-lg p-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-[10px] text-slate-400 flex-1 truncate">{test.name} (/{test.total})</span>
-                                                                            <input type="number" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                const newScores = [...prev.test_scores];
-                                                                                newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                return { ...prev, test_scores: newScores };
-                                                                            })} placeholder="점수" className="w-16 bg-slate-900 border border-white/5 rounded px-2 py-1 text-xs text-rose-400 font-bold focus:outline-none focus:border-rose-500" />
-                                                                        </div>
-                                                                        {/* Word test pass/fail */}
-                                                                        {test.isWordTest && (
-                                                                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                                                <div className="flex gap-1">
-                                                                                    {(['pass', 'fail'] as const).map(r => (
-                                                                                        <button key={r} onClick={() => updateStudentForm(student.id, prev => {
-                                                                                            const newScores = [...prev.test_scores];
-                                                                                            newScores[idx] = { ...newScores[idx], wordTestResult: r };
-                                                                                            return { ...prev, test_scores: newScores };
-                                                                                        })} className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${ts.wordTestResult === r
-                                                                                            ? r === 'pass' ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/20 border-rose-500/30 text-rose-400'
-                                                                                            : 'bg-slate-800 border-white/5 text-slate-500 hover:text-white'}`}>
-                                                                                            {r.toUpperCase()}
-                                                                                        </button>
-                                                                                    ))}
-                                                                                </div>
-                                                                                {ts.wordTestResult === 'fail' && (
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        {(['재시험 완료', '추후 재시'] as const).map(action => (
-                                                                                            <button key={action} onClick={() => updateStudentForm(student.id, prev => {
-                                                                                                const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], failAction: action };
-                                                                                                return { ...prev, test_scores: newScores };
-                                                                                            })} className={`px-2 py-0.5 rounded text-[10px] border ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-800 border-white/5 text-slate-500'}`}>
-                                                                                                {action}
-                                                                                            </button>
-                                                                                        ))}
-                                                                                        {ts.failAction === '추후 재시' && (
-                                                                                            <input value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                                const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
-                                                                                                return { ...prev, test_scores: newScores };
-                                                                                            })} placeholder="재시험일" className="w-20 bg-slate-900 border border-white/5 rounded px-1.5 py-0.5 text-[10px] focus:outline-none focus:border-rose-500" />
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Comment */}
-                                                <div>
-                                                    <label className="block text-[10px] text-slate-500 mb-1">개별 코멘트</label>
-                                                    <textarea value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
-                                                        rows={2} placeholder="이 학생에 대한 개별 코멘트..." className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-500 resize-none" />
                                                 </div>
                                             </div>
                                         );
@@ -748,6 +705,56 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     )}
                 </div>
             </div>
+
+            {/* Homework Status Modal */}
+            <AnimatePresence>
+                {hwModalIdx !== null && activeClass && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setHwModalIdx(null)}>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onClick={e => e.stopPropagation()}
+                            className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-white text-sm">과제 상태 체크</h3>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{sharedForm.homeworks[hwModalIdx]?.name}</p>
+                                </div>
+                                <button onClick={() => setHwModalIdx(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                {activeClass.students.map(student => {
+                                    const sf = studentForms[student.id];
+                                    const hs = sf?.hw_statuses[hwModalIdx!] || { status: '확인완료' as HwStatus, plan: '' };
+                                    const needsPlan = hs.status === '교재미지참' || hs.status === '전체미완' || hs.status === '일부미완';
+                                    return (
+                                        <div key={student.id} className="bg-black/30 border border-white/5 rounded-xl px-4 py-3 space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-sm font-medium text-white">{student.name}</span>
+                                                <select value={hs.status} onChange={e => updateStudentForm(student.id, prev => {
+                                                    const newHw = [...prev.hw_statuses];
+                                                    newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], status: e.target.value as HwStatus };
+                                                    return { ...prev, hw_statuses: newHw };
+                                                })} className={`bg-slate-900 border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none ${hs.status === '확인완료' || hs.status === '미완 후 보충완료' ? 'border-emerald-500/30 text-emerald-400' : 'border-rose-500/30 text-rose-400'
+                                                    }`}>
+                                                    {HW_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            {needsPlan && (
+                                                <input value={hs.plan} onChange={e => updateStudentForm(student.id, prev => {
+                                                    const newHw = [...prev.hw_statuses];
+                                                    newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], plan: e.target.value };
+                                                    return { ...prev, hw_statuses: newHw };
+                                                })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="p-3 border-t border-white/10">
+                                <button onClick={() => setHwModalIdx(null)} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-bold transition-colors">완료</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Report History Modal */}
             <AnimatePresence>
@@ -769,7 +776,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 <span className="text-sm font-medium text-white">{report.publishedDate}</span>
                                                 <span className="ml-2 text-[10px] text-slate-500 uppercase">{report.reportType}</span>
                                             </div>
-                                            <button onClick={() => handleDeleteReport(report.id, showReportHistory!)}
+                                            <button onClick={() => handleDeleteReport(report.id)}
                                                 className="text-slate-600 hover:text-rose-400 transition-colors flex items-center gap-1 text-xs">
                                                 <Trash2 size={14} /> 삭제
                                             </button>
@@ -782,7 +789,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 )}
             </AnimatePresence>
 
-            {/* Global Styles */}
             <style jsx global>{`
                 .input-field {
                     width: 100%;
