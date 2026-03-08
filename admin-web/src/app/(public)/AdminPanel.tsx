@@ -839,16 +839,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             if (updateError) throw updateError;
 
             if (actionType === 'COMPLETE') {
-                setTrackerData(prev => prev.filter(i => i.id !== item.id));
+                alert('해결 처리 되었습니다.');
+                loadMissingTrackerData();
             } else {
                 alert('연기 처리 되었습니다.');
                 loadMissingTrackerData();
                 setPostponeStateId(null);
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to update tracker item', error);
-            alert('업데이트 실패했습니다.');
+            alert('업데이트 실패했습니다: ' + (error?.message || error));
         }
     };
 
@@ -1565,8 +1566,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
                                                 <div className="mt-auto pt-2 grid grid-cols-2 gap-2 border-t border-white/5">
                                                     <button onClick={() => {
-                                                        if (window.confirm('완료된 항목을 목록에서 삭제하시겠습니까?')) {
-                                                            handleTrackerUpdate(item, 'COMPLETE', '');
+                                                        try {
+                                                            if (window.confirm('완료된 항목을 목록에서 삭제하시겠습니까?')) {
+                                                                handleTrackerUpdate(item, 'COMPLETE', '');
+                                                            }
+                                                        } catch (e: any) {
+                                                            alert("Error in Complete: " + e.message);
                                                         }
                                                     }} className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">
                                                         {item.type === 'homework' ? '검사완료' : item.type === 'test' ? '통과' : '보강완료'}
@@ -1582,13 +1587,19 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                         </div>
                                                     ) : (
                                                         <button onClick={() => {
-                                                            if (window.confirm('해당 미완과제를 재연기하시겠습니까?')) {
-                                                                setPostponeStateId(item.id);
+                                                            try {
+                                                                if (window.confirm('해당 미완과제를 재연기하시겠습니까?')) {
+                                                                    setPostponeStateId(item.id);
 
-                                                                // Calculate tomorrow
-                                                                const d = new Date(item.targetDate || new Date().toISOString());
-                                                                d.setDate(d.getDate() + 1);
-                                                                setPostponeDate(d.toISOString().split('T')[0]);
+                                                                    // Calculate tomorrow
+                                                                    const targetStr = item.targetDate || new Date().toISOString();
+                                                                    const d = new Date(targetStr);
+                                                                    if (isNaN(d.getTime())) throw new Error("Invalid date: " + targetStr);
+                                                                    d.setDate(d.getDate() + 1);
+                                                                    setPostponeDate(d.toISOString().split('T')[0]);
+                                                                }
+                                                            } catch (e: any) {
+                                                                alert("Error in Postpone: " + e.message);
                                                             }
                                                         }} className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs py-1.5 rounded-md font-bold transition-colors">
                                                             추가연기
