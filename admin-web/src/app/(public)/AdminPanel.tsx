@@ -12,8 +12,11 @@ interface StudentFormData {
     attendance_status: string;
     attendance_time: string;
     attendance_reason: string;
-    hw_statuses: { status: HwStatus; plan: string }[];
-    test_scores: { score: string; wordTestResult?: 'pass' | 'fail'; failAction?: '해당없음' | '재시험 완료' | '추후 재시'; retestDate?: string }[];
+    makeupType: '영상보강' | '직접보강' | '';
+    makeupDate: string;
+    makeupStatus: '미완료' | '보강완료';
+    hw_statuses: { status: HwStatus; plan: string; recheckDate?: string; postponeCount?: number }[];
+    test_scores: { score: string; wordTestResult?: 'pass' | 'fail'; failAction?: '해당없음' | '재시험 완료' | '추후 재시'; retestDate?: string; postponeCount?: number }[];
     teacher_comment: string;
 }
 
@@ -32,6 +35,9 @@ const defaultStudentForm = (hwCount: number, testCount: number): StudentFormData
     attendance_status: '정상 등원 완료',
     attendance_time: '',
     attendance_reason: '',
+    makeupType: '',
+    makeupDate: '',
+    makeupStatus: '미완료',
     hw_statuses: Array.from({ length: hwCount }, () => ({ status: '확인완료' as HwStatus, plan: '' })),
     test_scores: Array.from({ length: testCount }, () => ({ score: '' })),
     teacher_comment: ''
@@ -63,6 +69,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [showTrackerModal, setShowTrackerModal] = useState(false);
     const [trackerData, setTrackerData] = useState<any[]>([]);
     const [isTrackerLoading, setIsTrackerLoading] = useState(false);
+    const [postponeStateId, setPostponeStateId] = useState<string | null>(null);
+    const [postponeDate, setPostponeDate] = useState<string>('');
 
     // Homework status modal
     const [hwModalIdx, setHwModalIdx] = useState<number | null>(null);
@@ -200,7 +208,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         const individualHws: Record<string, string[]> = {}; // Map of student name -> homework names
 
         homeworks.forEach(hw => {
-            if (!hw.name || hw.isWordOrTest) return; // Skip empty or word/test homeworks
+            if (!hw.name) return; // Skip empty homeworks
 
             const isGlobal = hw.assignees.length === allStudentIds.length && allStudentIds.every(id => hw.assignees.includes(id));
             if (isGlobal || hw.assignees.length === 0) { // Assume empty assignees = global during creation if not explicitly set initially
@@ -342,6 +350,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         attendance_status: raw.attendance_status || '정상 등원 완료',
                         attendance_time: raw.attendance_time || '',
                         attendance_reason: raw.attendance_reason || '',
+                        makeupType: raw.makeupType || '',
+                        makeupDate: raw.makeupDate || '',
+                        makeupStatus: raw.makeupStatus || '미완료',
                         hw_statuses: raw.hw_statuses ||
                             Array.from({ length: hwCount }, (_, i) => ({
                                 status: raw.assignment_tracking?.[i]?.status || '확인완료',
@@ -597,7 +608,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             const isHws: string[] = [];
 
             sharedForm.newAssignments.forEach(hw => {
-                if (!hw.name || hw.isWordOrTest) return;
+                if (!hw.name) return;
                 const isGlobal = hw.assignees.length === allIds.length || hw.assignees.length === 0;
                 if (isGlobal || hw.assignees.length === 0) {
                     gHws.push(hw.name);
@@ -697,8 +708,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                 if (isAssigned && hw.name) {
                                     const status = raw.hw_statuses[idx]?.status;
                                     const plan = raw.hw_statuses[idx]?.plan;
-                                    // Identify incomplete states
-                                    if (status === '교재미지참' || status === '전체미완' || status === '일부미완' || status === '결석') {
+                                    const recheckDate = raw.hw_statuses[idx]?.recheckDate || '';
+                                    const postponeCount = raw.hw_statuses[idx]?.postponeCount || 0;
+
+                                    if (status !== '확인완료' && status !== '미완 후 보충완료') {
                                         incompleteItems.push({
                                             id: `${report.id}-hw-${idx}`,
                                             reportId: report.id,
@@ -706,10 +719,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             studentName: student.name,
                                             className: cls.name,
                                             date: report.publishedDate,
+                                            targetDate: recheckDate || report.publishedDate,
                                             type: 'homework',
                                             name: hw.name,
                                             status: status,
                                             plan: plan,
+                                            postponeCount: postponeCount,
                                             isWordOrTest: hw.isWordOrTest,
                                             rawIndex: idx
                                         });
@@ -718,13 +733,18 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             });
                         }
 
-                        // 2. Check Failed/Postponed Word Tests
+                        // 2. Check Failed/Postponed Tests
                         if (raw.tests && raw.test_scores) {
                             raw.tests.forEach((test: any, idx: number) => {
                                 const isAssigned = !test.assignees || test.assignees.length === 0 || test.assignees.includes(student.id);
-                                if (isAssigned && test.name && test.isWordTest) {
+                                if (isAssigned && test.name) {
                                     const ts = raw.test_scores[idx];
-                                    if (ts && ts.failAction === '추후 재시') {
+                                    const postponeCount = ts?.postponeCount || 0;
+                                    const isFail = test.isWordTest && ts?.failAction === '추후 재시';
+                                    const isMissed = ts?.score === '미응시(결석)' || ts?.score === '연기';
+
+                                    if ((isFail || isMissed) && ts?.failAction !== '재시험 완료' && ts?.failAction !== '해당없음') {
+                                        const displayStatus = isFail ? '추후 재시' : ts.score;
                                         incompleteItems.push({
                                             id: `${report.id}-test-${idx}`,
                                             reportId: report.id,
@@ -732,23 +752,44 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             studentName: student.name,
                                             className: cls.name,
                                             date: report.publishedDate,
+                                            targetDate: ts?.retestDate || report.publishedDate,
                                             type: 'test',
                                             name: test.name,
-                                            status: ts.failAction,
-                                            plan: `재시험일: ${ts.retestDate || '미정'}`,
-                                            score: ts.score,
+                                            status: displayStatus,
+                                            plan: `재시험일: ${ts?.retestDate || '미정'}`,
+                                            score: ts?.score,
+                                            postponeCount: postponeCount,
                                             rawIndex: idx
                                         });
                                     }
                                 }
                             });
                         }
+
+                        // 3. Check Unresolved Absences
+                        if (raw.attendance_status === '결석' && raw.makeupStatus !== '보강완료') {
+                            incompleteItems.push({
+                                id: `${report.id}-absence`,
+                                reportId: report.id,
+                                studentId: student.id,
+                                studentName: student.name,
+                                className: cls.name,
+                                date: report.publishedDate,
+                                targetDate: raw.makeupDate || report.publishedDate,
+                                type: 'absence',
+                                name: `[결석 보강] ${raw.lesson_content ? raw.lesson_content.substring(0, 15) + '...' : '수업결손'}`,
+                                status: '미완료',
+                                plan: `보강유형: ${raw.makeupType || '미정'}`,
+                                postponeCount: raw.postponeCount || 0,
+                                rawIndex: -1
+                            });
+                        }
                     });
                 }
             }
 
-            // Sort by date descending
-            incompleteItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            // Sort by targetDate ascending (most urgent first)
+            incompleteItems.sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
             setTrackerData(incompleteItems);
         } catch (error) {
             console.error('Failed to load tracker data', error);
@@ -756,9 +797,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         setIsTrackerLoading(false);
     };
 
-    const handleTrackerUpdate = async (item: any, newStatus: string) => {
+    const handleTrackerUpdate = async (item: any, actionType: 'COMPLETE' | 'POSTPONE', payload: string) => {
         try {
-            // Find the original report
             const { data: reportData, error } = await supabase.from('student_reports').select('*').eq('id', item.reportId).single();
             if (error || !reportData) throw new Error('Cannot find report');
 
@@ -766,25 +806,45 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
             if (item.type === 'homework') {
                 if (rawJson.hw_statuses && rawJson.hw_statuses[item.rawIndex]) {
-                    rawJson.hw_statuses[item.rawIndex].status = newStatus;
-                    if (newStatus === '미완 후 보충완료') {
-                        rawJson.hw_statuses[item.rawIndex].plan = '보충완료'; // Clear or update plan
+                    if (actionType === 'COMPLETE') {
+                        rawJson.hw_statuses[item.rawIndex].status = '미완 후 보충완료';
+                        rawJson.hw_statuses[item.rawIndex].plan = '보충완료';
+                    } else if (actionType === 'POSTPONE') {
+                        rawJson.hw_statuses[item.rawIndex].postponeCount = (rawJson.hw_statuses[item.rawIndex].postponeCount || 0) + 1;
+                        rawJson.hw_statuses[item.rawIndex].recheckDate = payload;
                     }
                 }
             } else if (item.type === 'test') {
                 if (rawJson.test_scores && rawJson.test_scores[item.rawIndex]) {
-                    rawJson.test_scores[item.rawIndex].failAction = newStatus;
+                    if (actionType === 'COMPLETE') {
+                        rawJson.test_scores[item.rawIndex].failAction = '재시험 완료';
+                    } else if (actionType === 'POSTPONE') {
+                        rawJson.test_scores[item.rawIndex].postponeCount = (rawJson.test_scores[item.rawIndex].postponeCount || 0) + 1;
+                        rawJson.test_scores[item.rawIndex].retestDate = payload;
+                        if (rawJson.test_scores[item.rawIndex].score === '미응시(결석)' || rawJson.test_scores[item.rawIndex].score === '연기') { } else {
+                            rawJson.test_scores[item.rawIndex].failAction = '추후 재시';
+                        }
+                    }
+                }
+            } else if (item.type === 'absence') {
+                if (actionType === 'COMPLETE') {
+                    rawJson.makeupStatus = '보강완료';
+                } else if (actionType === 'POSTPONE') {
+                    rawJson.postponeCount = (rawJson.postponeCount || 0) + 1;
+                    rawJson.makeupDate = payload;
                 }
             }
 
-            // Update in Supabase (we are not updating the HTML here, only the raw data so it doesn't show up in tracker)
-            // Note: In a full system, we might want to regenerate the HTML report if the status changes, but for now we just update DB to clear the flag.
             const { error: updateError } = await supabase.from('student_reports').update({ raw_data_json: rawJson }).eq('id', item.reportId);
-
             if (updateError) throw updateError;
 
-            // Remove from local tracker state
-            setTrackerData(prev => prev.filter(i => i.id !== item.id));
+            if (actionType === 'COMPLETE') {
+                setTrackerData(prev => prev.filter(i => i.id !== item.id));
+            } else {
+                alert('연기 처리 되었습니다.');
+                loadMissingTrackerData();
+                setPostponeStateId(null);
+            }
 
         } catch (error) {
             console.error('Failed to update tracker item', error);
@@ -912,7 +972,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         <Users size={16} /> 출결 / 코멘트 ({activeClass.students.length}명)
                                     </h4>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {activeClass.students.map(student => {
                                             const sf = studentForms[student.id] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
                                             return (
@@ -938,8 +998,31 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                         </div>
                                                     )}
                                                     {sf.attendance_status === '결석' && (
-                                                        <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
-                                                            placeholder="결석 사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
+                                                        <div className="space-y-1">
+                                                            <input type="text" value={sf.attendance_reason} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_reason: e.target.value }))}
+                                                                placeholder="결석 사유" className="w-full bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500" />
+                                                            <div className="flex gap-1 mt-1">
+                                                                <select value={sf.makeupType} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, makeupType: e.target.value as any }))}
+                                                                    className="flex-1 bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500">
+                                                                    <option value="">보강유형 선택</option>
+                                                                    <option value="영상보강">영상보강</option>
+                                                                    <option value="직접보강">직접보강</option>
+                                                                </select>
+                                                                {sf.makeupType && (
+                                                                    <div className="flex flex-1 items-center gap-1">
+                                                                        <input type="date" value={sf.makeupDate} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, makeupDate: e.target.value }))}
+                                                                            title={sf.makeupType === '영상보강' ? '영상배부일' : '보강예정일'}
+                                                                            className="w-full bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
+                                                                        <button onClick={() => {
+                                                                            const currentStr = sf.makeupDate || new Date().toISOString().split('T')[0];
+                                                                            const d = new Date(currentStr);
+                                                                            d.setDate(d.getDate() + 1);
+                                                                            updateStudentForm(student.id, prev => ({ ...prev, makeupDate: d.toISOString().split('T')[0] }));
+                                                                        }} className="px-1.5 py-1 bg-slate-800 text-slate-400 rounded-lg hover:bg-slate-700 text-[10px]">&gt;</button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     )}
                                                     <textarea value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
                                                         rows={3} placeholder="개별 코멘트..." className="w-full bg-black border border-white/5 rounded-lg px-2 py-1.5 text-[10px] focus:outline-none focus:border-rose-500 resize-none" />
@@ -1224,11 +1307,30 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 </select>
                                             </div>
                                             {needsPlan && (
-                                                <input value={hs.plan} onChange={e => updateStudentForm(student.id, prev => {
-                                                    const newHw = [...prev.hw_statuses];
-                                                    newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], plan: e.target.value };
-                                                    return { ...prev, hw_statuses: newHw };
-                                                })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500 text-white" />
+                                                <div className="space-y-1">
+                                                    <input value={hs.plan} onChange={e => updateStudentForm(student.id, prev => {
+                                                        const newHw = [...prev.hw_statuses];
+                                                        newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], plan: e.target.value };
+                                                        return { ...prev, hw_statuses: newHw };
+                                                    })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500 text-white" />
+                                                    <div className="flex gap-1 items-center">
+                                                        <input type="date" value={hs.recheckDate || ''} title="재검사일" onChange={e => updateStudentForm(student.id, prev => {
+                                                            const newHw = [...prev.hw_statuses];
+                                                            newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], recheckDate: e.target.value };
+                                                            return { ...prev, hw_statuses: newHw };
+                                                        })} className="flex-1 bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
+                                                        <button onClick={() => {
+                                                            const currentStr = hs.recheckDate || sharedForm.published_date || new Date().toISOString().split('T')[0];
+                                                            const d = new Date(currentStr);
+                                                            d.setDate(d.getDate() + 1);
+                                                            updateStudentForm(student.id, prev => {
+                                                                const newHw = [...prev.hw_statuses];
+                                                                newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], recheckDate: d.toISOString().split('T')[0] };
+                                                                return { ...prev, hw_statuses: newHw };
+                                                            });
+                                                        }} className="px-2 py-1.5 bg-slate-800 text-slate-400 rounded-lg hover:bg-slate-700 text-[10px]">&gt;</button>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     );
@@ -1266,7 +1368,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         <input type="checkbox" checked={sharedForm.newAssignments[hwAssignIdx].isWordOrTest} onChange={e => handleNewAssignChange(hwAssignIdx, 'isWordOrTest', e.target.checked)} className="rounded bg-black border-white/20" />
                                         단어 암기 또는 테스트 여부
                                     </label>
-                                    <span className="text-[10px] text-slate-500">(체크 시 리포트에 출력되지 않습니다)</span>
+                                    <span className="text-[10px] text-slate-500">(체크 시 다음 수업의 '지난 과제 불러오기' 목록에는 뜨지 않습니다. 하지만 리포트의 '다음 숙제'란에는 정상 출력됩니다.)</span>
                                 </div>
                             </div>
 
@@ -1436,11 +1538,15 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         {trackerData.map((item) => (
                                             <div key={item.id} className="bg-black/50 border border-white/10 rounded-xl p-4 flex flex-col space-y-3 relative group">
                                                 <div className="flex justify-between items-start">
-                                                    <div>
+                                                    <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold text-white">{item.studentName}</span>
-                                                        <span className="text-[10px] text-slate-400 ml-2">{item.className}</span>
+                                                        <span className="text-[10px] text-slate-400">{item.className}</span>
+                                                        {item.postponeCount > 0 && <span className="text-[10px] font-bold text-rose-400 bg-rose-500/20 px-1.5 py-0.5 rounded">[{item.postponeCount + 1}차 연기]</span>}
                                                     </div>
-                                                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">{item.date}</span>
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded ml-auto flex flex-col mb-1 border border-slate-700">발행: {item.date}</span>
+                                                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-1.5 py-0.5 rounded ml-auto flex flex-col border border-indigo-500/30">목표: {item.targetDate}</span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex items-start gap-2">
@@ -1457,16 +1563,36 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     {item.plan && <p className="mt-1 text-slate-300">계획: {item.plan}</p>}
                                                 </div>
 
-                                                <div className="mt-auto pt-2 grid grid-cols-2 gap-2">
-                                                    {item.type === 'homework' ? (
-                                                        <>
-                                                            <button onClick={() => handleTrackerUpdate(item, '확인완료')} className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">확인완료</button>
-                                                            <button onClick={() => handleTrackerUpdate(item, '미완 후 보충완료')} className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs py-1.5 rounded-md font-bold transition-colors">보충완료</button>
-                                                        </>
+                                                <div className="mt-auto pt-2 grid grid-cols-2 gap-2 border-t border-white/5">
+                                                    <button onClick={() => {
+                                                        if (window.confirm('완료된 항목을 목록에서 삭제하시겠습니까?')) {
+                                                            handleTrackerUpdate(item, 'COMPLETE', '');
+                                                        }
+                                                    }} className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">
+                                                        {item.type === 'homework' ? '검사완료' : item.type === 'test' ? '통과' : '보강완료'}
+                                                    </button>
+
+                                                    {postponeStateId === item.id ? (
+                                                        <div className="flex gap-1 items-center bg-black rounded p-1 border border-amber-500/30">
+                                                            <input type="date" value={postponeDate} onChange={e => setPostponeDate(e.target.value)} className="flex-1 bg-transparent border-none text-[10px] text-amber-200 outline-none w-full" />
+                                                            <button onClick={() => {
+                                                                if (postponeDate) handleTrackerUpdate(item, 'POSTPONE', postponeDate);
+                                                            }} className="bg-amber-500 text-black px-2 py-0.5 rounded font-bold text-[10px] shrink-0 hover:bg-amber-400">확인</button>
+                                                            <button onClick={() => setPostponeStateId(null)} className="text-slate-500 hover:text-white px-1 shrink-0"><X size={12} /></button>
+                                                        </div>
                                                     ) : (
-                                                        <>
-                                                            <button onClick={() => handleTrackerUpdate(item, '재시험 완료')} className="col-span-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">재시험 완료 처리</button>
-                                                        </>
+                                                        <button onClick={() => {
+                                                            if (window.confirm('해당 미완과제를 재연기하시겠습니까?')) {
+                                                                setPostponeStateId(item.id);
+
+                                                                // Calculate tomorrow
+                                                                const d = new Date(item.targetDate || new Date().toISOString());
+                                                                d.setDate(d.getDate() + 1);
+                                                                setPostponeDate(d.toISOString().split('T')[0]);
+                                                            }
+                                                        }} className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs py-1.5 rounded-md font-bold transition-colors">
+                                                            추가연기
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>

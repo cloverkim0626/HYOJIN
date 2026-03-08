@@ -874,66 +874,60 @@ const ReportSection = () => {
 
     // Calendar helper: find incomplete assignments and postponed tests from all reports
     const getIncompleteAssignments = () => {
-        const incompleteMap: Record<string, { name: string; status: string; plan: string }[]> = {};
+        const incompleteMap: Record<string, { type: string; name: string; status: string; plan: string }[]> = {};
 
         studentReports.forEach(report => {
             const raw = report.rawDataJson;
             if (!raw) return;
 
-            const dt = report.publishedDate;
-            const incompletes: any[] = [];
-
             // 1. Missing Homeworks
             if (raw.homeworks && raw.hw_statuses) {
                 raw.homeworks.forEach((hw: any, idx: number) => {
-                    // Check if assigned to this student
                     const isAssigned = !hw.assignees || hw.assignees.length === 0 || hw.assignees.includes(selectedStudentId);
                     if (isAssigned && hw.name) {
                         const status = raw.hw_statuses[idx]?.status;
                         const plan = raw.hw_statuses[idx]?.plan;
+                        const recheckDate = raw.hw_statuses[idx]?.recheckDate || report.publishedDate;
 
-                        if (status === '교재미지참' || status === '전체미완' || status === '일부미완' || status === '결석') {
-                            incompletes.push({
-                                type: 'homework',
-                                name: hw.name,
-                                status,
-                                plan
-                            });
+                        if (status !== '확인완료' && status !== '미완 후 보충완료') {
+                            if (!incompleteMap[recheckDate]) incompleteMap[recheckDate] = [];
+                            incompleteMap[recheckDate].push({ type: 'homework', name: hw.name, status, plan });
                         }
                     }
                 });
             }
 
-            // 2. Postponed Word Tests
+            // 2. Postponed Tests
             if (raw.tests && raw.test_scores) {
                 raw.tests.forEach((test: any, idx: number) => {
                     const isAssigned = !test.assignees || test.assignees.length === 0 || test.assignees.includes(selectedStudentId);
                     if (isAssigned && test.name) {
                         const ts = raw.test_scores[idx];
                         if (ts) {
-                            if (ts.score === '미응시(결석)' || ts.score === '연기') {
-                                incompletes.push({
-                                    type: 'test',
-                                    name: test.name,
-                                    status: ts.score,
-                                    plan: '미완료 시험'
-                                });
-                            } else if (test.isWordTest && ts.failAction === '추후 재시') {
-                                incompletes.push({
-                                    type: 'test',
-                                    name: test.name,
-                                    status: '추후 재시 (단어)',
-                                    plan: `재시험일: ${ts.retestDate || '미정'}`
-                                });
+                            const isFail = test.isWordTest && ts.failAction === '추후 재시';
+                            const isMissed = ts.score === '미응시(결석)' || ts.score === '연기';
+
+                            if ((isFail || isMissed) && ts.failAction !== '재시험 완료' && ts.failAction !== '해당없음') {
+                                const targetDate = ts.retestDate || report.publishedDate;
+                                const displayStatus = isFail ? '추후 재시' : ts.score;
+                                if (!incompleteMap[targetDate]) incompleteMap[targetDate] = [];
+                                incompleteMap[targetDate].push({ type: 'test', name: test.name, status: displayStatus, plan: `재시험일: ${ts.retestDate || '미정'}` });
                             }
                         }
                     }
                 });
             }
 
-            if (incompletes.length > 0) {
-                if (!incompleteMap[dt]) incompleteMap[dt] = [];
-                incompleteMap[dt].push(...incompletes);
+            // 3. Unresolved Absences
+            if (raw.attendance_status === '결석' && raw.makeupStatus !== '보강완료') {
+                const targetDate = raw.makeupDate || report.publishedDate;
+                if (!incompleteMap[targetDate]) incompleteMap[targetDate] = [];
+                incompleteMap[targetDate].push({
+                    type: 'absence',
+                    name: `[결석 보강] ${raw.lesson_content ? raw.lesson_content.substring(0, 15) + '...' : '수업결손'}`,
+                    status: '미완료',
+                    plan: `보강유형: ${raw.makeupType || '미정'}`
+                });
             }
         });
 
