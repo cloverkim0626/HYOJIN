@@ -21,6 +21,7 @@ interface SharedFormData {
     published_date: string;
     lesson_content: string;
     homeworks: { name: string; assignees: string[]; checkDate: string; isWordOrTest: boolean }[];
+    newAssignments: { name: string; assignees: string[]; checkDate: string; isWordOrTest: boolean }[];
     tests: { name: string; desc: string; total: string; cutline: string; isWordTest: boolean; assignees: string[] }[];
     test_images: string[];
     next_date_str: string;
@@ -75,6 +76,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         published_date: new Date().toISOString().split('T')[0],
         lesson_content: '',
         homeworks: [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
+        newAssignments: [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
         tests: [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
         test_images: [],
         next_date_str: '',
@@ -140,6 +142,22 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         const newHw = [...sharedForm.homeworks];
         newHw[idx] = { ...newHw[idx], [field]: value };
         setSharedForm(prev => ({ ...prev, homeworks: newHw }));
+    };
+
+    const addNewAssignment = () => {
+        const checkD = sharedForm.next_date_str ? sharedForm.next_date_str : sharedForm.published_date;
+        const newArr = [...sharedForm.newAssignments, { name: '', assignees: activeClass ? activeClass.students.map(s => s.id) : [], checkDate: checkD, isWordOrTest: false }];
+        setSharedForm(prev => ({ ...prev, newAssignments: newArr }));
+    };
+    const removeNewAssignment = (idx: number) => {
+        if (sharedForm.newAssignments.length <= 1) return;
+        const newArr = sharedForm.newAssignments.filter((_, i) => i !== idx);
+        setSharedForm(prev => ({ ...prev, newAssignments: newArr }));
+    };
+    const handleNewAssignChange = (idx: number, field: keyof SharedFormData['newAssignments'][number], value: any) => {
+        const newArr = [...sharedForm.newAssignments];
+        newArr[idx] = { ...newArr[idx], [field]: value };
+        setSharedForm(prev => ({ ...prev, newAssignments: newArr }));
     };
 
     const addTest = () => {
@@ -210,12 +228,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         return text.trim();
     };
 
-    // Update next_content when homeworks change or are saved
+    // Update next_content when newAssignments change or are saved
     React.useEffect(() => {
         if (activeClass) {
-            handleSharedChange('next_content', generateNextHomeworkText(sharedForm.homeworks));
+            handleSharedChange('next_content', generateNextHomeworkText(sharedForm.newAssignments));
         }
-    }, [sharedForm.homeworks, activeClass]);
+    }, [sharedForm.newAssignments, activeClass]);
 
     // --- Auto-calculate average for a test (excluding blank scores) ---
     const calcAvg = (testIdx: number): number => {
@@ -306,6 +324,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             ...prev,
                             lesson_content: raw.lesson_content || '',
                             homeworks: (raw.homeworks && raw.homeworks.length > 0) ? raw.homeworks : [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
+                            newAssignments: (raw.newAssignments && raw.newAssignments.length > 0) ? raw.newAssignments : [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
                             tests: (raw.tests && raw.tests.length > 0)
                                 ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false, assignees: t.assignees || [] }))
                                 : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
@@ -340,11 +359,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 // 2. While we are fetching reports for this student, let's also look for PAST assignments where checkDate === TODAY
                 // and it is NOT a word/test assignment.
                 const pastReportsWithIncomingAssignments = reports.filter(
-                    r => r.reportType === reportType && r.publishedDate !== sharedForm.published_date && r.rawDataJson?.homeworks
+                    r => r.reportType === reportType && r.publishedDate !== sharedForm.published_date && r.rawDataJson?.newAssignments
                 );
 
                 pastReportsWithIncomingAssignments.forEach(pr => {
-                    const hws = pr.rawDataJson.homeworks as SharedFormData['homeworks'];
+                    const hws = pr.rawDataJson.newAssignments as SharedFormData['newAssignments'];
                     hws.forEach(hw => {
                         if (hw.name && hw.checkDate === sharedForm.published_date && !hw.isWordOrTest) {
                             // Only add if it's assigned to this student (or everyone) and we haven't added it yet
@@ -392,6 +411,55 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         } catch (err) {
             console.error('Load error:', err);
             alert('⚠️ 데이터 불러오기에 실패했습니다.');
+        }
+        setIsLoadingReports(false);
+    };
+
+    // --- Load Past Assignments Only ---
+    const handleLoadPastAssignments = async () => {
+        if (!activeClass) return;
+        setIsLoadingReports(true);
+        try {
+            let fetchedPastAssignments: SharedFormData['newAssignments'] = [];
+            for (const student of activeClass.students) {
+                const reports = await fetchStudentReports(student.id);
+                const pastReportsWithIncomingAssignments = reports.filter(
+                    r => r.reportType === reportType && r.publishedDate !== sharedForm.published_date && r.rawDataJson?.newAssignments
+                );
+                pastReportsWithIncomingAssignments.forEach(pr => {
+                    const hws = pr.rawDataJson.newAssignments as SharedFormData['newAssignments'];
+                    hws.forEach(hw => {
+                        if (hw.name && hw.checkDate === sharedForm.published_date && !hw.isWordOrTest) {
+                            const isAssignedToThisStudent = hw.assignees.length === 0 || hw.assignees.includes(student.id);
+                            const alreadyAdded = fetchedPastAssignments.some(existing => existing.name === hw.name && existing.checkDate === hw.checkDate);
+                            if (isAssignedToThisStudent && !alreadyAdded) {
+                                fetchedPastAssignments.push(hw);
+                            }
+                        }
+                    });
+                });
+            }
+
+            if (fetchedPastAssignments.length > 0) {
+                setSharedForm(prev => {
+                    const currentHomeworks = prev.homeworks.filter(hw => hw.name.trim() !== '');
+                    const newUniqueAssignments = fetchedPastAssignments.filter(fetched =>
+                        !currentHomeworks.some(existing => existing.name === fetched.name)
+                    );
+                    const mergedHomeworks = [...currentHomeworks, ...newUniqueAssignments];
+                    if (mergedHomeworks.length === 0) {
+                        mergedHomeworks.push({ name: '', assignees: [], checkDate: '', isWordOrTest: false });
+                    }
+                    setTimeout(() => syncStudentFormsToShared(mergedHomeworks, prev.tests), 0);
+                    return { ...prev, homeworks: mergedHomeworks };
+                });
+                alert(`✅ 점검일이 오늘(${sharedForm.published_date})인 지난 과제 ${fetchedPastAssignments.length}개를 불러왔습니다.`);
+            } else {
+                alert(`ℹ️ 점검일이 오늘인 지난 과제가 없습니다.`);
+            }
+        } catch (err) {
+            console.error('Load past hw error:', err);
+            alert('⚠️ 과제 불러오기에 실패했습니다.');
         }
         setIsLoadingReports(false);
     };
@@ -520,6 +588,35 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             if (sf.attendance_status === '지각' && sf.attendance_time) attendanceDisplay += ` (${sf.attendance_time})`;
             if ((sf.attendance_status === '지각' || sf.attendance_status === '결석') && sf.attendance_reason) attendanceDisplay += `\n사유: ${sf.attendance_reason}`;
 
+            // Evaluate student-specific "Next Homework" content
+            let studentNextContent = '';
+            // If the user manually edited the box, prioritize that? No, we need it dynamic.
+            // If there's 0 custom generic text, reconstruct dynamically:
+            const allIds = activeClass.students.map(s => s.id);
+            const gHws: string[] = [];
+            const isHws: string[] = [];
+
+            sharedForm.newAssignments.forEach(hw => {
+                if (!hw.name || hw.isWordOrTest) return;
+                const isGlobal = hw.assignees.length === allIds.length || hw.assignees.length === 0;
+                if (isGlobal || hw.assignees.length === 0) {
+                    gHws.push(hw.name);
+                } else if (hw.assignees.includes(student.id)) {
+                    isHws.push(hw.name);
+                }
+            });
+
+            if (gHws.length > 0) {
+                studentNextContent += '<전체>\n' + gHws.map(name => `• ${name}`).join('\n') + '\n';
+            }
+            if (isHws.length > 0) {
+                studentNextContent += `\n<${student.name} 개별과제>\n` + isHws.map(name => `• ${name}`).join('\n') + '\n';
+            }
+            if (studentNextContent.trim() === '' && sharedForm.next_content.trim() !== '') {
+                // strict fallback string if newAssignments is empty but they typed something directly
+                studentNextContent = sharedForm.next_content;
+            }
+
             // Replace template variables
             const avgScore0 = calcAvg(0);
             const variables: Record<string, string> = {
@@ -535,7 +632,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 '{{hw_plan}}': sf.hw_statuses[0]?.plan || '',
                 '{{homeworks_html}}': hwHtml,
                 '{{next_date_str}}': sharedForm.next_date_str,
-                '{{next_content}}': sharedForm.next_content,
+                '{{next_content}}': studentNextContent.trim(),
                 '{{teacher_comment}}': sf.teacher_comment,
                 '{{tests_html}}': testsHtml + testImagesHtml,
                 '{{contact_link}}': 'https://open.kakao.com/o/sY6xBxji'
@@ -857,40 +954,39 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             <CheckCircle2 size={16} /> 공통 입력 (반 전체 동일)
                                         </h4>
 
-                                        {/* Date */}
-                                        <div>
-                                            <label className="block text-xs text-slate-400 mb-1">수업 일자</label>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={handlePrevDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronLeft size={20} /></button>
-                                                <input type="date" value={sharedForm.published_date} onChange={e => handleSharedChange('published_date', e.target.value)} className="input-field flex-1" />
-                                                <button onClick={handleNextDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronRight size={20} /></button>
+                                        {/* Date & Lesson content */}
+                                        <div className="flex flex-col md:flex-row gap-4">
+                                            <div className="w-full md:w-1/3">
+                                                <label className="block text-xs text-slate-400 mb-1">수업 일자</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={handlePrevDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronLeft size={20} /></button>
+                                                    <input type="date" value={sharedForm.published_date} onChange={e => handleSharedChange('published_date', e.target.value)} className="input-field flex-1 text-sm px-2 cursor-pointer" />
+                                                    <button onClick={handleNextDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronRight size={20} /></button>
+                                                </div>
                                             </div>
-                                        </div>
-
-                                        {/* Lesson content */}
-                                        <div>
-                                            <label className="block text-xs text-slate-400 mb-1">학습 내용 요약</label>
-                                            <textarea value={sharedForm.lesson_content} onChange={e => handleSharedChange('lesson_content', e.target.value)} rows={3}
-                                                placeholder="교과서 1과 예상문제 풀이 및 주요 어법 포인트 Review..." className="input-field resize-none" />
+                                            <div className="w-full md:w-2/3">
+                                                <label className="block text-xs text-slate-400 mb-1">학습 내용 요약</label>
+                                                <textarea value={sharedForm.lesson_content} onChange={e => handleSharedChange('lesson_content', e.target.value)} rows={2}
+                                                    placeholder="교과서 1과 예상문제 풀이 및 주요 어법 포인트 Review..." className="input-field resize-none h-auto md:h-[46px]" />
+                                            </div>
                                         </div>
 
                                         {/* Homework names + status check button */}
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs text-slate-400">과제 목록</label>
-                                                <button onClick={addHomework} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-md text-white transition-colors flex items-center gap-1"><Plus size={12} /> 추가</button>
+                                                <label className="text-xs text-slate-400">금일 과제 목록 (검사)</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={handleLoadPastAssignments} className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-1 rounded-md transition-colors flex items-center gap-1 font-bold border border-indigo-500/20"><Download size={12} /> 지난 과제 불러오기</button>
+                                                    <button onClick={addHomework} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-md text-white transition-colors flex items-center gap-1"><Plus size={12} /> 추가</button>
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 {sharedForm.homeworks.map((hw, idx) => (
                                                     <div key={idx} className="flex gap-2 items-center">
-                                                        <input value={hw.name} onChange={e => handleHwSharedChange(idx, 'name', e.target.value)} placeholder={`과제 ${idx + 1} (예: 워크북 17~63p)`}
+                                                        <input value={hw.name} onChange={e => handleHwSharedChange(idx, 'name', e.target.value)} placeholder={`결과 체크용 과제 ${idx + 1}`}
                                                             className="flex-1 bg-black border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
                                                         {hw.name && (
                                                             <div className="flex items-center gap-1">
-                                                                <button onClick={() => setHwAssignIdx(idx)}
-                                                                    className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-indigo-500/20 transition-colors whitespace-nowrap">
-                                                                    <Users size={14} /> 과제할당
-                                                                </button>
                                                                 <button onClick={() => setHwModalIdx(idx)}
                                                                     className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
                                                                     <ClipboardCheck size={14} /> 상태체크
@@ -915,97 +1011,112 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 {sharedForm.tests.map((test, idx) => {
                                                     const avg = calcAvg(idx);
                                                     return (
-                                                        <div key={idx} className="bg-black border border-white/5 rounded-xl p-4 relative group space-y-3">
-                                                            <div className="absolute top-2 right-2 flex items-center gap-2">
+                                                        <div key={idx} className="bg-black border border-white/5 rounded-xl p-4 relative group">
+                                                            <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
                                                                 <button onClick={() => setTestAssignIdx(idx)} className="text-[10px] flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-2 py-1 rounded border border-indigo-500/20 transition-colors">
-                                                                    <Users size={12} /> 응시자
+                                                                    <Users size={12} /> 응시자 지정
                                                                 </button>
                                                                 {sharedForm.tests.length > 1 && (
                                                                     <button onClick={() => removeTest(idx)} className="text-slate-500 hover:text-rose-400 p-1"><X size={14} /></button>
                                                                 )}
                                                             </div>
-                                                            {/* Test config row */}
-                                                            <div className="grid grid-cols-12 gap-2">
-                                                                <div className="col-span-4">
-                                                                    <input value={test.name} onChange={e => handleTestSharedChange(idx, 'name', e.target.value)} placeholder="시험명" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                            <div className="flex flex-col lg:flex-row gap-6">
+                                                                {/* Left: Test Config */}
+                                                                <div className="lg:w-1/3 space-y-3">
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-slate-500 mb-1">시험명</label>
+                                                                        <input value={test.name} onChange={e => handleTestSharedChange(idx, 'name', e.target.value)} placeholder="단어 1~2일차" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] text-slate-500 mb-1">범위/설명</label>
+                                                                        <input value={test.desc} onChange={e => handleTestSharedChange(idx, 'desc', e.target.value)} placeholder="능률보카" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <div className="flex-1">
+                                                                            <label className="block text-[10px] text-slate-500 mb-1">만점</label>
+                                                                            <input value={test.total} onChange={e => handleTestSharedChange(idx, 'total', e.target.value)} placeholder="100" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <label className="block text-[10px] text-amber-500/70 mb-1">커트라인</label>
+                                                                            <input value={test.cutline} onChange={e => handleTestSharedChange(idx, 'cutline', e.target.value)} placeholder="80" className="w-full bg-slate-900 border border-amber-500/30 rounded-lg px-3 py-2 text-sm text-amber-400 focus:outline-none focus:border-amber-500" />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="pt-2 border-t border-white/5">
+                                                                        <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                                                                            <input type="checkbox" checked={test.isWordTest} onChange={e => handleTestSharedChange(idx, 'isWordTest', e.target.checked)} className="rounded" />
+                                                                            단어 테스트 (커트라인 미달시 FAIL)
+                                                                        </label>
+                                                                    </div>
+                                                                    {test.name && <div className="text-xs text-emerald-400 font-bold bg-emerald-500/10 inline-block px-2 py-1 rounded">평균: {avg}점</div>}
                                                                 </div>
-                                                                <div className="col-span-3">
-                                                                    <input value={test.desc} onChange={e => handleTestSharedChange(idx, 'desc', e.target.value)} placeholder="범위" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <input value={test.total} onChange={e => handleTestSharedChange(idx, 'total', e.target.value)} placeholder="만점" className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
-                                                                </div>
-                                                                <div className="col-span-3">
-                                                                    <input value={test.cutline} onChange={e => handleTestSharedChange(idx, 'cutline', e.target.value)} placeholder="커트라인" className="w-full bg-slate-900 border border-amber-500/20 rounded-lg px-2 py-1.5 text-xs text-amber-400 focus:outline-none focus:border-amber-500" />
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between">
-                                                                <label className="flex items-center gap-2 text-[10px] text-slate-500 cursor-pointer">
-                                                                    <input type="checkbox" checked={test.isWordTest} onChange={e => handleTestSharedChange(idx, 'isWordTest', e.target.checked)} className="rounded" />
-                                                                    단어 테스트 (커트라인 미달 시 자동 FAIL)
-                                                                </label>
-                                                                {test.name && <span className="text-[10px] text-emerald-400 font-bold">평균: {avg}점</span>}
-                                                            </div>
 
-                                                            {/* Inline student scores */}
-                                                            {test.name && activeClass && (
-                                                                <div className="border-t border-white/5 pt-2 space-y-1">
-                                                                    {activeClass.students.filter(student => test.assignees.includes(student.id) || test.assignees.length === 0).map(student => {
-                                                                        const sf = studentForms[student.id];
-                                                                        const ts = sf?.test_scores[idx] || { score: '' };
-                                                                        const scoreNum = parseFloat(ts.score) || 0;
-                                                                        const cutlineNum = parseFloat(test.cutline) || 0;
-                                                                        const isFail = test.isWordTest && test.cutline && ts.score !== '' && isFinite(scoreNum) && scoreNum < cutlineNum;
-                                                                        return (
-                                                                            <div key={student.id} className="flex items-center gap-2">
-                                                                                <span className="text-[10px] text-slate-500 w-16 truncate">{student.name}</span>
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <input type="text" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                        const newScores = [...prev.test_scores];
-                                                                                        newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                        return { ...prev, test_scores: newScores };
-                                                                                    })} placeholder="—" className={`w-14 bg-slate-900 border rounded px-2 py-1 text-xs font-bold focus:outline-none ${isFail ? 'border-rose-500/40 text-rose-400' : 'border-white/5 text-emerald-400'} focus:border-rose-500`} />
-
-                                                                                    <select value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                        const newScores = [...prev.test_scores];
-                                                                                        newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                        return { ...prev, test_scores: newScores };
-                                                                                    })} className="bg-slate-900 border border-white/5 rounded px-1 py-1 text-[9px] text-slate-400 focus:outline-none">
-                                                                                        <option value="">(직접입력)</option>
-                                                                                        <option value="해당없음">해당없음</option>
-                                                                                        <option value="미응시(결석)">미응시(결석)</option>
-                                                                                        <option value="연기">연기</option>
-                                                                                    </select>
-                                                                                </div>
-
-                                                                                {isFail && <span className="text-[9px] text-rose-400 font-bold">FAIL</span>}
-                                                                                {test.isWordTest && ts.score !== '' && !isFail && !isNaN(scoreNum) && <span className="text-[9px] text-emerald-400 font-bold">PASS</span>}
-                                                                                {/* Fail actions for word test */}
-                                                                                {isFail && (
-                                                                                    <div className="flex items-center gap-1 ml-1">
-                                                                                        {(['재시험 완료', '추후 재시'] as const).map(action => (
-                                                                                            <button key={action} onClick={() => updateStudentForm(student.id, prev => {
+                                                                {/* Right: Inline Student Scores */}
+                                                                <div className="lg:w-2/3 lg:border-l lg:border-white/5 lg:pl-6">
+                                                                    <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">학생 점수 입력</h5>
+                                                                    {!test.name ? (
+                                                                        <div className="text-xs text-slate-600 italic">시험명을 입력하면 활성화됩니다.</div>
+                                                                    ) : (
+                                                                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2">
+                                                                            {activeClass?.students.filter(student => test.assignees.includes(student.id) || test.assignees.length === 0).map(student => {
+                                                                                const sf = studentForms[student.id];
+                                                                                const ts = sf?.test_scores[idx] || { score: '' };
+                                                                                const scoreNum = parseFloat(ts.score) || 0;
+                                                                                const cutlineNum = parseFloat(test.cutline) || 0;
+                                                                                const isFail = test.isWordTest && test.cutline && ts.score !== '' && isFinite(scoreNum) && scoreNum < cutlineNum;
+                                                                                return (
+                                                                                    <div key={student.id} className="flex items-center flex-wrap gap-2 bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                                                                                        <span className="text-xs font-bold text-slate-300 w-16 truncate">{student.name}</span>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <input type="text" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
                                                                                                 const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], failAction: action };
+                                                                                                newScores[idx] = { ...newScores[idx], score: e.target.value };
                                                                                                 return { ...prev, test_scores: newScores };
-                                                                                            })} className={`px-1.5 py-0.5 rounded text-[9px] border ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-800 border-white/5 text-slate-500'}`}>
-                                                                                                {action}
-                                                                                            </button>
-                                                                                        ))}
-                                                                                        {ts.failAction === '추후 재시' && (
-                                                                                            <input type="date" value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                            })} placeholder="점수" className={`w-16 bg-black border rounded px-2 py-1 text-sm font-bold focus:outline-none text-center ${isFail ? 'border-rose-500/50 text-rose-400' : 'border-white/10 text-emerald-400'} focus:border-rose-500`} />
+
+                                                                                            <select value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
                                                                                                 const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
+                                                                                                newScores[idx] = { ...newScores[idx], score: e.target.value };
                                                                                                 return { ...prev, test_scores: newScores };
-                                                                                            })} className="w-24 bg-slate-900 border border-white/5 rounded px-1 py-0.5 text-[9px] focus:outline-none focus:border-rose-500 text-slate-300" />
-                                                                                        )}
+                                                                                            })} className="bg-black border border-white/10 rounded px-2 py-1.5 text-[10px] text-slate-400 focus:outline-none">
+                                                                                                <option value="">(직접입력)</option>
+                                                                                                <option value="해당없음">해당없음</option>
+                                                                                                <option value="미응시(결석)">미응시(결석)</option>
+                                                                                                <option value="연기">연기</option>
+                                                                                            </select>
+                                                                                        </div>
+
+                                                                                        <div className="flex items-center gap-2 ml-auto">
+                                                                                            {isFail && <span className="text-[10px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded font-bold">FAIL</span>}
+                                                                                            {test.isWordTest && ts.score !== '' && !isFail && !isNaN(scoreNum) && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">PASS</span>}
+                                                                                            {/* Fail actions for word test */}
+                                                                                            {isFail && (
+                                                                                                <div className="flex items-center gap-1">
+                                                                                                    {(['재시험 완료', '추후 재시'] as const).map(action => (
+                                                                                                        <button key={action} onClick={() => updateStudentForm(student.id, prev => {
+                                                                                                            const newScores = [...prev.test_scores];
+                                                                                                            newScores[idx] = { ...newScores[idx], failAction: action };
+                                                                                                            return { ...prev, test_scores: newScores };
+                                                                                                        })} className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-black border-white/10 text-slate-500 hover:bg-white/5'}`}>
+                                                                                                            {action}
+                                                                                                        </button>
+                                                                                                    ))}
+                                                                                                    {ts.failAction === '추후 재시' && (
+                                                                                                        <input type="date" value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                                            const newScores = [...prev.test_scores];
+                                                                                                            newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
+                                                                                                            return { ...prev, test_scores: newScores };
+                                                                                                        })} className="w-28 bg-black border border-white/10 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
                                                                                     </div>
-                                                                                )}
-                                                                            </div>
-                                                                        );
-                                                                    })}
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            )}
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
@@ -1040,8 +1151,35 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 <input type="text" value={sharedForm.next_date_str} onChange={e => handleSharedChange('next_date_str', e.target.value)} placeholder="3월 9일 월요일" className="input-field" />
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-slate-400 mb-1">다음 숙제/내용</label>
-                                                <textarea value={sharedForm.next_content} onChange={e => handleSharedChange('next_content', e.target.value)} rows={2} placeholder="• 교과 1과 단어 암기" className="input-field resize-none" />
+                                                <label className="block text-xs text-slate-400 mb-1">다음 숙제/내용 (자동 생성됨)</label>
+                                                <textarea value={sharedForm.next_content} onChange={e => handleSharedChange('next_content', e.target.value)} rows={2} placeholder="아래 과제 할당시 자동입력" className="input-field resize-none text-[10px]" />
+                                            </div>
+                                        </div>
+
+                                        {/* New Assignments (Next Homework) */}
+                                        <div className="bg-slate-900/30 border border-white/5 rounded-xl p-4 mt-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="text-xs text-indigo-300 font-bold flex items-center gap-1"><Users size={14} /> 다음 수업 과제 할당</label>
+                                                <button onClick={addNewAssignment} className="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 px-3 py-1 rounded-md transition-colors flex items-center gap-1"><Plus size={12} /> 새 과제 추가</button>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {sharedForm.newAssignments.map((hw, idx) => (
+                                                    <div key={idx} className="flex gap-2 items-center">
+                                                        <input value={hw.name} onChange={e => handleNewAssignChange(idx, 'name', e.target.value)} placeholder={`다음 과제 ${idx + 1}`}
+                                                            className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-indigo-100" />
+                                                        {hw.name && (
+                                                            <div className="flex items-center gap-1">
+                                                                <button onClick={() => setHwAssignIdx(idx)}
+                                                                    className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg text-xs font-bold border border-indigo-500/20 transition-colors whitespace-nowrap">
+                                                                    <Users size={14} /> 개별/전체 할당
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {sharedForm.newAssignments.length > 1 && (
+                                                            <button onClick={() => removeNewAssignment(idx)} className="text-slate-600 hover:text-rose-400 p-1"><X size={16} /></button>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
@@ -1113,19 +1251,19 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             <div className="p-4 border-b border-white/10 flex items-center justify-between">
                                 <div>
                                     <h3 className="font-bold text-white text-sm">과제 할당 및 설정</h3>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">{sharedForm.homeworks[hwAssignIdx]?.name}</p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{sharedForm.newAssignments[hwAssignIdx]?.name}</p>
                                 </div>
                                 <button onClick={() => setHwAssignIdx(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
                             </div>
 
                             <div className="p-4 border-b border-white/5 space-y-4">
                                 <div>
-                                    <label className="block text-xs text-slate-400 mb-1">과제 점검일 (기본: 오늘 리포트 작성일)</label>
-                                    <input type="date" value={sharedForm.homeworks[hwAssignIdx].checkDate} onChange={e => handleHwSharedChange(hwAssignIdx, 'checkDate', e.target.value)} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500" />
+                                    <label className="block text-xs text-slate-400 mb-1">과제 점검일 (기본: 다음 수업 날짜)</label>
+                                    <input type="date" value={sharedForm.newAssignments[hwAssignIdx].checkDate} onChange={e => handleNewAssignChange(hwAssignIdx, 'checkDate', e.target.value)} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500" />
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                                        <input type="checkbox" checked={sharedForm.homeworks[hwAssignIdx].isWordOrTest} onChange={e => handleHwSharedChange(hwAssignIdx, 'isWordOrTest', e.target.checked)} className="rounded bg-black border-white/20" />
+                                        <input type="checkbox" checked={sharedForm.newAssignments[hwAssignIdx].isWordOrTest} onChange={e => handleNewAssignChange(hwAssignIdx, 'isWordOrTest', e.target.checked)} className="rounded bg-black border-white/20" />
                                         단어 암기 또는 테스트 여부
                                     </label>
                                     <span className="text-[10px] text-slate-500">(체크 시 리포트에 출력되지 않습니다)</span>
@@ -1136,21 +1274,21 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                 <h4 className="text-xs font-bold text-slate-300">학생 할당</h4>
                                 <button onClick={() => {
                                     const allIds = activeClass!.students.map(s => s.id);
-                                    const isAllAssigned = sharedForm.homeworks[hwAssignIdx].assignees.length === allIds.length;
-                                    handleHwSharedChange(hwAssignIdx, 'assignees', isAllAssigned ? [] : allIds);
+                                    const isAllAssigned = sharedForm.newAssignments[hwAssignIdx].assignees.length === allIds.length;
+                                    handleNewAssignChange(hwAssignIdx, 'assignees', isAllAssigned ? [] : allIds);
                                 }} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded transition-colors">
-                                    {sharedForm.homeworks[hwAssignIdx].assignees.length === activeClass.students.length ? '전체 해제' : '전체 선택'}
+                                    {sharedForm.newAssignments[hwAssignIdx].assignees.length === activeClass.students.length ? '전체 해제' : '전체 선택'}
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
                                 {activeClass.students.map(student => {
-                                    const isAssigned = sharedForm.homeworks[hwAssignIdx].assignees.includes(student.id);
+                                    const isAssigned = sharedForm.newAssignments[hwAssignIdx].assignees.includes(student.id);
                                     return (
                                         <button key={student.id} onClick={() => {
                                             const newAssignees = isAssigned
-                                                ? sharedForm.homeworks[hwAssignIdx].assignees.filter(id => id !== student.id)
-                                                : [...sharedForm.homeworks[hwAssignIdx].assignees, student.id];
-                                            handleHwSharedChange(hwAssignIdx, 'assignees', newAssignees);
+                                                ? sharedForm.newAssignments[hwAssignIdx].assignees.filter(id => id !== student.id)
+                                                : [...sharedForm.newAssignments[hwAssignIdx].assignees, student.id];
+                                            handleNewAssignChange(hwAssignIdx, 'assignees', newAssignees);
                                         }} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-colors ${isAssigned ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-100' : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/10'}`}>
                                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isAssigned ? 'border-indigo-400 bg-indigo-500' : 'border-slate-600'}`}>
                                                 {isAssigned && <CheckCircle2 size={10} className="text-white" />}

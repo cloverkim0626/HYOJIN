@@ -908,15 +908,24 @@ const ReportSection = () => {
             if (raw.tests && raw.test_scores) {
                 raw.tests.forEach((test: any, idx: number) => {
                     const isAssigned = !test.assignees || test.assignees.length === 0 || test.assignees.includes(selectedStudentId);
-                    if (isAssigned && test.name && test.isWordTest) {
+                    if (isAssigned && test.name) {
                         const ts = raw.test_scores[idx];
-                        if (ts && ts.failAction === '추후 재시') {
-                            incompletes.push({
-                                type: 'test',
-                                name: test.name,
-                                status: ts.failAction,
-                                plan: `재시험일: ${ts.retestDate || '미정'}`
-                            });
+                        if (ts) {
+                            if (ts.score === '미응시(결석)' || ts.score === '연기') {
+                                incompletes.push({
+                                    type: 'test',
+                                    name: test.name,
+                                    status: ts.score,
+                                    plan: '미완료 시험'
+                                });
+                            } else if (test.isWordTest && ts.failAction === '추후 재시') {
+                                incompletes.push({
+                                    type: 'test',
+                                    name: test.name,
+                                    status: '추후 재시 (단어)',
+                                    plan: `재시험일: ${ts.retestDate || '미정'}`
+                                });
+                            }
                         }
                     }
                 });
