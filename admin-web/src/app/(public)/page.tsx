@@ -541,32 +541,33 @@ const TimetableSection = () => {
         {
             class: '[WOODOK] 아라고2',
             times: [
-                { day: '월', time: '20:00 - 22:00', type: '정규' },
-                { day: '수', time: '20:00 - 22:00', type: '정규' },
+                { day: '월', time: '19:30 - 21:30', type: '정규' },
+                { day: '수', time: '19:30 - 21:30', type: '정규' },
                 { day: '금', time: '17:00 - 20:00', type: '클리닉' }
             ]
         },
         {
-            class: '[WOODOK] 고3 내신&수능 도약반',
+            class: '[WOODOK] 고3 내신&수능 Rebound반',
             times: [
                 { day: '금', time: '20:30 - 22:30', type: '정규' },
-                { day: '토', time: '19:00 - 21:00', type: '정규' }
+                { day: '토', time: '19:00 - 21:00', type: '정규' },
+                { day: '금', time: '18:30 - 20:30', type: '클리닉' }
             ]
         },
         {
             class: '[WOODOK] 아라고1',
             times: [
-                { day: '월', time: '18:00 - 20:00', type: '정규' },
-                { day: '토', time: '15:00 - 17:00', type: '정규' },
-                { day: '금', time: '17:00 - 20:00', type: '클리닉' }
+                { day: '월', time: '17:00 - 19:00', type: '정규' },
+                { day: '수', time: '17:00 - 19:00', type: '정규' },
+                { day: '토', time: '16:00 - 19:00', type: '클리닉' }
             ]
         },
         {
             class: '[WOODOK] 원당고1',
             times: [
-                { day: '월', time: '18:00 - 20:00', type: '정규' },
-                { day: '토', time: '15:00 - 17:00', type: '정규' },
-                { day: '금', time: '17:00 - 20:00', type: '클리닉' }
+                { day: '월', time: '17:00 - 19:00', type: '정규' },
+                { day: '수', time: '17:00 - 19:00', type: '정규' },
+                { day: '토', time: '16:00 - 19:00', type: '클리닉' }
             ]
         },
     ];
@@ -813,32 +814,14 @@ const ReportSection = () => {
     // Viewer state
     const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-    // Calendar modal state
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [calendarMonth, setCalendarMonth] = useState(new Date());
-    const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+    // Tracker modal state
+    const [showStudentTracker, setShowStudentTracker] = useState(false);
 
     let activeClass = classes.find(c => c.id === selectedClassId);
     let activeStudent = activeClass?.students.find(s => s.id === selectedStudentId);
 
-    // 강력한 예외 처리: 모바일 등 특정 환경에서 스토어 동기화가 지연/실패하더라도 샘플은 무조건 렌더링되게 강제
-    if (selectedClassId === 'c-sample' && selectedStudentId === 's-sample' && !activeStudent) {
-        activeClass = { id: 'c-sample', name: '[공개용] 리포트 샘플', students: [], templates: [] };
-        activeStudent = {
-            id: 's-sample',
-            name: '샘플학생',
-            classId: 'c-sample',
-            reports: [{
-                id: 's-sample-1',
-                studentId: 's-sample',
-                reportType: 'daily',
-                publishedDate: new Date().toISOString().split('T')[0],
-                finalHtml: '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><h2>샘플학생 일간 리포트 (예시)</h2><p style="margin-top: 10px;">관리자 페이지에서 내용을 자유롭게 수정하여 학부모님들께 보여줄 수 있습니다.</p></div>',
-                rawDataJson: {},
-                createdAt: new Date().toISOString()
-            }]
-        };
-    }
+    // If activeStudent has no password, we could potentially auto-login
+    // but we'll handle the sample button specifically below.
 
     const handleLogin = async () => {
         const hardcodedPasswords: Record<string, string> = {
@@ -872,9 +855,9 @@ const ReportSection = () => {
     const activeReport = sortedReports[currentReportIndex];
     let currentReportHtml = activeReport?.finalHtml || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
 
-    // Calendar helper: find incomplete assignments and postponed tests from all reports
-    const getIncompleteAssignments = () => {
-        const incompleteMap: Record<string, { type: string; name: string; status: string; plan: string }[]> = {};
+    // Tracker helper: find incomplete assignments and postponed tests from all reports
+    const getIncompleteAssignmentsList = () => {
+        const list: { type: string; name: string; status: string; plan: string; targetDate: string; postponeCount: number; score?: string }[] = [];
 
         studentReports.forEach(report => {
             const raw = report.rawDataJson;
@@ -885,13 +868,14 @@ const ReportSection = () => {
                 raw.homeworks.forEach((hw: any, idx: number) => {
                     const isAssigned = !hw.assignees || hw.assignees.length === 0 || hw.assignees.includes(selectedStudentId);
                     if (isAssigned && hw.name) {
-                        const status = raw.hw_statuses[idx]?.status;
-                        const plan = raw.hw_statuses[idx]?.plan;
-                        const recheckDate = raw.hw_statuses[idx]?.recheckDate || report.publishedDate;
-
-                        if (status !== '확인완료' && status !== '미완 후 보충완료') {
-                            if (!incompleteMap[recheckDate]) incompleteMap[recheckDate] = [];
-                            incompleteMap[recheckDate].push({ type: 'homework', name: hw.name, status, plan });
+                        const sObj = raw.hw_statuses[idx];
+                        if (sObj) {
+                            const status = sObj.status;
+                            const plan = sObj.plan;
+                            const targetDate = sObj.recheckDate || report.publishedDate;
+                            if (status !== '확인완료' && status !== '미완 후 보충완료') {
+                                list.push({ type: 'homework', name: hw.name, status, plan, targetDate, postponeCount: sObj.postponeCount || 0 });
+                            }
                         }
                     }
                 });
@@ -910,8 +894,15 @@ const ReportSection = () => {
                             if ((isFail || isMissed) && ts.failAction !== '재시험 완료' && ts.failAction !== '해당없음') {
                                 const targetDate = ts.retestDate || report.publishedDate;
                                 const displayStatus = isFail ? '추후 재시' : ts.score;
-                                if (!incompleteMap[targetDate]) incompleteMap[targetDate] = [];
-                                incompleteMap[targetDate].push({ type: 'test', name: test.name, status: displayStatus, plan: `재시험일: ${ts.retestDate || '미정'}` });
+                                list.push({
+                                    type: 'test',
+                                    name: test.name,
+                                    status: displayStatus,
+                                    plan: `재시험일: ${ts.retestDate || '미정'}`,
+                                    targetDate,
+                                    postponeCount: ts.postponeCount || 0,
+                                    score: ts.score
+                                });
                             }
                         }
                     }
@@ -921,29 +912,19 @@ const ReportSection = () => {
             // 3. Unresolved Absences
             if (raw.attendance_status === '결석' && raw.makeupStatus !== '보강완료') {
                 const targetDate = raw.makeupDate || report.publishedDate;
-                if (!incompleteMap[targetDate]) incompleteMap[targetDate] = [];
-                incompleteMap[targetDate].push({
+                list.push({
                     type: 'absence',
                     name: `[결석 보강] ${raw.lesson_content ? raw.lesson_content.substring(0, 15) + '...' : '수업결손'}`,
                     status: '미완료',
-                    plan: `보강유형: ${raw.makeupType || '미정'}`
+                    plan: `보강유형: ${raw.makeupType || '미정'}`,
+                    targetDate,
+                    postponeCount: raw.postponeCount || 0
                 });
             }
         });
 
-        return incompleteMap;
+        return list;
     };
-
-    const incompleteMap = showCalendar ? getIncompleteAssignments() : {};
-
-    // Calendar rendering helpers
-    const calendarYear = calendarMonth.getFullYear();
-    const calendarMonthIdx = calendarMonth.getMonth();
-    const daysInMonth = new Date(calendarYear, calendarMonthIdx + 1, 0).getDate();
-    const firstDayOfWeek = new Date(calendarYear, calendarMonthIdx, 1).getDay();
-    const calendarDays: (number | null)[] = [];
-    for (let i = 0; i < firstDayOfWeek; i++) calendarDays.push(null);
-    for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
     const handleNextReport = () => {
         if (currentReportIndex > 0) setCurrentReportIndex(prev => prev - 1);
@@ -973,10 +954,23 @@ const ReportSection = () => {
                             {/* 리포트 샘플 바로보기 버튼 */}
                             <div className="mb-8">
                                 <button
-                                    onClick={() => {
-                                        setSelectedClassId('c-sample');
-                                        setSelectedStudentId('s-sample');
-                                        setStep('view');
+                                    onClick={async () => {
+                                        // Find the sample student named '김우독' in the sample class
+                                        const sampleClass = classes.find(c => c.name === '[공개용] 리포트 샘플');
+                                        const sampleStudent = sampleClass?.students.find(s => s.name === '김우독');
+
+                                        if (sampleStudent) {
+                                            setSelectedClassId(sampleClass!.id);
+                                            setSelectedStudentId(sampleStudent.id);
+
+                                            // Bypass password and fetch reports immediately
+                                            const reports = await fetchStudentReports(sampleStudent.id);
+                                            setStudentReports(reports);
+                                            setCurrentReportIndex(0);
+                                            setStep('view');
+                                        } else {
+                                            alert('샘플 데이터를 불러올 수 없습니다. 관리자에게 문의해주세요.');
+                                        }
                                     }}
                                     className="w-full p-5 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 rounded-2xl flex items-center justify-between transition-all shadow-lg shadow-blue-500/20 group border border-blue-400/30"
                                 >
@@ -1070,11 +1064,11 @@ const ReportSection = () => {
 
                             {/* Personal Premium Greeting */}
                             <div className="pt-8 pb-4 text-center relative">
-                                {/* Calendar button */}
-                                <button onClick={() => { setShowCalendar(true); setCalendarMonth(new Date()); setSelectedCalendarDate(null); }}
-                                    className="absolute top-4 right-0 flex items-center gap-1 text-[10px] text-slate-400 hover:text-rose-500 border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg transition-colors">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                                    과제현황
+                                {/* Missing Assignment Tracker Button with Glow */}
+                                <button onClick={() => setShowStudentTracker(true)}
+                                    className="absolute top-4 right-0 flex items-center gap-1.5 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-full transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_20px_rgba(37,99,235,0.6)] animate-glow-pulse border border-blue-400/30">
+                                    <ClipboardList size={14} />
+                                    미완과제 추적
                                 </button>
                                 <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
@@ -1151,70 +1145,107 @@ const ReportSection = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Monthly Calendar Modal */}
-                {showCalendar && (
-                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowCalendar(false)}>
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-                            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                                <button onClick={() => setCalendarMonth(new Date(calendarYear, calendarMonthIdx - 1, 1))} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-                                </button>
-                                <h3 className="font-bold text-slate-900">{calendarYear}년 {calendarMonthIdx + 1}월</h3>
-                                <button onClick={() => setCalendarMonth(new Date(calendarYear, calendarMonthIdx + 1, 1))} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-                                </button>
-                            </div>
-                            <div className="p-4">
-                                <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                                    {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                                        <div key={d} className="text-[10px] font-bold text-slate-400">{d}</div>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-7 gap-1">
-                                    {calendarDays.map((day, i) => {
-                                        if (day === null) return <div key={`e-${i}`} />;
-                                        const dateStr = `${calendarYear}-${String(calendarMonthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                        const hasIncomplete = !!incompleteMap[dateStr];
-                                        const isSelected = selectedCalendarDate === dateStr;
-                                        return (
-                                            <button key={day} onClick={() => setSelectedCalendarDate(isSelected ? null : dateStr)}
-                                                className={`relative w-full aspect-square flex items-center justify-center rounded-full text-xs font-medium transition-colors ${isSelected ? 'bg-slate-900 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
-                                                {day}
-                                                {hasIncomplete && (
-                                                    <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            {selectedCalendarDate && incompleteMap[selectedCalendarDate] && (
-                                <div className="border-t border-slate-100 p-4 space-y-2 bg-red-50/50">
-                                    <p className="text-xs font-bold text-red-600 flex items-center gap-1">
-                                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {selectedCalendarDate} 미완결 리스트
-                                    </p>
-                                    {incompleteMap[selectedCalendarDate].map((item: any, idx: number) => (
-                                        <div key={idx} className="bg-white rounded-lg p-2 border border-red-100 flex flex-col gap-1">
-                                            <div className="flex justify-between items-start">
-                                                <p className="text-xs font-bold text-slate-800">{item.name}</p>
-                                                <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-bold whitespace-nowrap ml-2">{item.status}</span>
-                                            </div>
-                                            {item.plan && <p className="text-[10px] text-slate-500">→ {item.plan}</p>}
+                {/* Student Assignment Tracker Modal */}
+                <AnimatePresence>
+                    {showStudentTracker && (
+                        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowStudentTracker(false)}>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                onClick={e => e.stopPropagation()}
+                                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] relative"
+                            >
+                                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 relative z-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                                            <ClipboardList size={20} />
                                         </div>
-                                    ))}
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-lg">미완과제 추적기</h3>
+                                            <p className="text-xs text-slate-400 font-medium">{activeStudent?.name} 학생의 미완료 항목</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setShowStudentTracker(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer relative z-50">
+                                        <X size={20} />
+                                    </button>
                                 </div>
-                            )}
-                            {selectedCalendarDate && !incompleteMap[selectedCalendarDate] && (
-                                <div className="border-t border-slate-100 p-4">
-                                    <p className="text-xs text-slate-400 text-center">이 날짜에 미완 과제가 없습니다.</p>
+
+                                <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10 bg-slate-50/30">
+                                    {getIncompleteAssignmentsList().length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                                            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-4 opacity-50">
+                                                <ShieldCheck size={32} />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-500">모든 과제와 시험을 완료했습니다!</p>
+                                            <p className="text-[11px] mt-1">대단해요! 지금처럼 계속 화이팅해봐요.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {getIncompleteAssignmentsList().sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()).map((item, idx) => (
+                                                <div key={idx} className="group relative bg-white rounded-2xl p-5 border border-slate-100 transition-all hover:shadow-md hover:border-blue-100">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${item.type === 'homework' ? 'bg-amber-100 text-amber-700' :
+                                                            item.type === 'test' ? 'bg-rose-100 text-rose-700' :
+                                                                'bg-indigo-100 text-indigo-700'
+                                                            }`}>
+                                                            {item.type === 'homework' ? 'Homework' : item.type === 'test' ? 'Test' : 'Absence'}
+                                                        </span>
+                                                        <div className="text-right">
+                                                            <div className="flex items-center gap-1.5 text-rose-500 font-bold text-[11px] bg-rose-50 px-2 py-0.5 rounded-lg mb-1">
+                                                                <Calendar size={12} />
+                                                                목표: {item.targetDate}
+                                                            </div>
+                                                            {item.postponeCount > 0 && (
+                                                                <span className="text-[9px] font-black text-rose-400 opacity-60">[{item.postponeCount + 1}차 연기됨]</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <h4 className="font-bold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors leading-relaxed">
+                                                        {item.name}
+                                                    </h4>
+
+                                                    <div className="flex gap-2">
+                                                        <div className="bg-slate-50 rounded-xl p-2.5 text-[11px] text-slate-500 border border-slate-100 flex-1">
+                                                            <span className="font-bold text-slate-900 mr-2">상태:</span>
+                                                            {item.status}
+                                                            {item.plan && <p className="mt-1 text-slate-400 font-medium italic">→ {item.plan}</p>}
+                                                            {item.score && (
+                                                                <div className="mt-1 flex items-center gap-1">
+                                                                    <span className="text-rose-500 font-bold">점수: {item.score}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            <div className="p-3 border-t border-slate-100">
-                                <button onClick={() => setShowCalendar(false)} className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">닫기</button>
-                            </div>
+
+                                <div className="p-4 bg-white border-t border-slate-100 flex flex-col items-center shrink-0 relative z-10">
+                                    <p className="text-[10px] text-slate-400 font-medium mb-3">해당 과제를 완료하면 다음 리포트 발행 시 목록에서 사라집니다.</p>
+                                    <button onClick={() => setShowStudentTracker(false)}
+                                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition-all shadow-lg shadow-slate-200 cursor-pointer">
+                                        확인했습니다
+                                    </button>
+                                </div>
+                            </motion.div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </AnimatePresence>
+
+                <style jsx global>{`
+                    @keyframes glow-pulse {
+                        0% { box-shadow: 0 0 5px rgba(37, 99, 235, 0.2); }
+                        50% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.5); }
+                        100% { box-shadow: 0 0 5px rgba(37, 99, 235, 0.2); }
+                    }
+                    .animate-glow-pulse {
+                        animation: glow-pulse 2s infinite ease-in-out;
+                    }
+                `}</style>
             </div>
         </SectionWrapper>
     );

@@ -24,6 +24,9 @@ export interface Student {
     classId: string;
     name: string;
     password?: string | null;
+    student_phone?: string | null;
+    parent_phone?: string | null;
+    notes?: string | null;
     reports?: StudentReport[]; // Loaded on demand
 }
 
@@ -41,6 +44,7 @@ interface ReportStore {
     addClass: (name: string) => Promise<void>;
     deleteClass: (classId: string) => Promise<void>;
     addStudent: (classId: string, studentName: string) => Promise<void>;
+    updateStudent: (studentId: string, data: Partial<Student>) => Promise<void>;
     deleteStudent: (classId: string, studentId: string) => Promise<void>;
     saveReportTemplate: (classId: string, reportType: 'daily' | 'weekly' | 'monthly', templateHtml: string) => Promise<void>;
     fetchStudentReports: (studentId: string) => Promise<StudentReport[]>;
@@ -98,50 +102,18 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                         classId: stu.class_id,
                         name: stu.name,
                         password: stu.password,
+                        student_phone: stu.student_phone,
+                        parent_phone: stu.parent_phone,
+                        notes: stu.notes,
                         reports: []
                     }))
             }));
 
-            // Add sample data to the front
-            const sampleClass = {
-                id: 'c-sample',
-                name: '[공개용] 리포트 샘플',
-                templates: [],
-                students: [{
-                    id: 's-sample',
-                    name: '샘플학생',
-                    classId: 'c-sample',
-                    password: '1234',
-                    reports: [{
-                        id: 'r-sample-1',
-                        studentId: 's-sample',
-                        reportType: 'daily' as const,
-                        publishedDate: '2026-03-05',
-                        finalHtml: sampleDailyReportHtml,
-                        rawDataJson: null,
-                        createdAt: new Date().toISOString()
-                    }]
-                }]
-            };
-
-            set({ classes: [sampleClass, ...formattedClasses], isLoading: false });
+            set({ classes: formattedClasses, isLoading: false });
 
         } catch (error) {
             console.error('Error fetching data from Supabase:', error);
-            // Even on error, show the sample class so the UI isn't broken
-            const sampleClass = {
-                id: 'c-sample',
-                name: '[공개용] 리포트 샘플',
-                templates: [],
-                students: [{
-                    id: 's-sample',
-                    name: '샘플학생',
-                    classId: 'c-sample',
-                    password: '1234',
-                    reports: []
-                }]
-            };
-            set({ classes: [sampleClass], isLoading: false });
+            set({ classes: [], isLoading: false });
         }
     },
 
@@ -186,6 +158,21 @@ export const useReportStore = create<ReportStore>((set, get) => ({
             await get().fetchData();
         } catch (error) {
             console.error('Error adding student:', error);
+        }
+    },
+
+    updateStudent: async (studentId, data) => {
+        try {
+            const { error } = await supabase
+                .from('students_list')
+                .update(data)
+                .eq('id', studentId);
+
+            if (error) throw error;
+            await get().fetchData(); // reload data immediately
+        } catch (error) {
+            console.error('Error updating student:', error);
+            throw error;
         }
     },
 

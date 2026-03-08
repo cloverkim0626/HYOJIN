@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReportStore } from '@/store/reportStore';
 import { supabase } from '@/lib/supabase';
-import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck, Download } from 'lucide-react';
+import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck, Download, Settings } from 'lucide-react';
 
 // --- Types ---
 const HW_STATUSES = ['확인완료', '교재미지참', '전체미완', '일부미완', '미완 후 보충완료', '결석'] as const;
@@ -52,7 +52,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { classes, fetchData, addClass, deleteClass, addStudent, deleteStudent, saveStudentReport, fetchStudentReports, deleteStudentReport } = useReportStore();
+    const { classes, fetchData, addClass, deleteClass, addStudent, updateStudent, deleteStudent, saveStudentReport, fetchStudentReports, deleteStudentReport } = useReportStore();
 
     React.useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -79,6 +79,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [hwAssignIdx, setHwAssignIdx] = useState<number | null>(null);
     const [testAssignIdx, setTestAssignIdx] = useState<number | null>(null);
 
+    // Student Settings Modal
+    const [showStudentSettings, setShowStudentSettings] = useState<string | null>(null); // studentId
+    const [editingStudent, setEditingStudent] = useState({ name: '', password: '', student_phone: '', parent_phone: '', notes: '' });
+
     // --- Shared form data ---
     const [sharedForm, setSharedForm] = useState<SharedFormData>({
         published_date: new Date().toISOString().split('T')[0],
@@ -87,7 +91,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         newAssignments: [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
         tests: [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
         test_images: [],
-        next_date_str: '',
+        next_date_str: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         next_content: ''
     });
 
@@ -126,7 +130,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
     // --- Shared form handlers ---
     const handleSharedChange = (field: keyof SharedFormData, value: any) => {
-        setSharedForm(prev => ({ ...prev, [field]: value }));
+        setSharedForm(prev => {
+            const updated = { ...prev, [field]: value };
+            // Auto-sync existing new assignments' checkDate if next class date changes
+            if (field === 'next_date_str') {
+                updated.newAssignments = updated.newAssignments.map(hw => ({
+                    ...hw,
+                    checkDate: value
+                }));
+            }
+            return updated;
+        });
     };
 
     const addHomework = () => {
@@ -675,7 +689,33 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         if (failedStudents.length > 0) {
             alert(`⚠️ ${failedStudents.join(', ')} 학생의 리포트 저장에 실패했습니다. 콘솔을 확인하세요.`);
         } else {
-            alert(`✅ ${successCount}명의 리포트가 성공적으로 저장되었습니다!`);
+            console.log('Publish result:', { successCount, failedStudents });
+            setTimeout(() => {
+                alert(`✅ ${successCount}명의 리포트가 성공적으로 발행되었습니다!`);
+            }, 100);
+        }
+    };
+
+    const handleClearForm = () => {
+        if (window.confirm('현재 입력된 모든 내용을 초기화하시겠습니까?')) {
+            const hC = sharedForm.homeworks.length;
+            const tC = sharedForm.tests.length;
+
+            setSharedForm(prev => ({
+                ...prev,
+                lesson_content: '',
+                next_content: '',
+                newAssignments: []
+            }));
+
+            setStudentForms(prev => {
+                const next = { ...prev };
+                Object.keys(next).forEach(sid => {
+                    next[sid] = defaultStudentForm(hC, tC);
+                });
+                return next;
+            });
+            alert('초기화되었습니다.');
         }
     };
 
@@ -920,8 +960,18 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             <div className="space-y-1 max-h-32 overflow-y-auto">
                                 {activeClass.students.map(s => (
                                     <div key={s.id} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-md hover:bg-white/5 group">
-                                        <span>{s.name}</span>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                        <span className="truncate pr-1">{s.name}</span>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
+                                            <button onClick={() => {
+                                                setEditingStudent({
+                                                    name: s.name,
+                                                    password: s.password || '',
+                                                    student_phone: s.student_phone || '',
+                                                    parent_phone: s.parent_phone || '',
+                                                    notes: s.notes || ''
+                                                });
+                                                setShowStudentSettings(s.id);
+                                            }} className="text-slate-400 hover:text-white transition-colors"><Settings size={12} /></button>
                                             <button onClick={() => openReportHistory(s.id)} className="text-blue-400 hover:text-blue-300 text-[10px]">기록</button>
                                             <button onClick={() => deleteStudent(selectedClassId!, s.id)} className="text-slate-600 hover:text-rose-400"><Trash2 size={12} /></button>
                                         </div>
@@ -979,7 +1029,19 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             return (
                                                 <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-xl p-3 space-y-2">
                                                     <div className="flex items-center justify-between">
-                                                        <h5 className="text-xs font-bold text-white">{student.name}</h5>
+                                                        <div className="flex items-center gap-1.5 focus-within:ring-1 focus-within:ring-rose-500 rounded-lg pr-2">
+                                                            <h5 className="text-xs font-bold text-white">{student.name}</h5>
+                                                            <button onClick={() => {
+                                                                setEditingStudent({
+                                                                    name: student.name,
+                                                                    password: student.password || '',
+                                                                    student_phone: student.student_phone || '',
+                                                                    parent_phone: student.parent_phone || '',
+                                                                    notes: student.notes || ''
+                                                                });
+                                                                setShowStudentSettings(student.id);
+                                                            }} className="text-slate-500 hover:text-white transition-all"><Settings size={12} /></button>
+                                                        </div>
                                                         <div className="flex items-center gap-2">
                                                             <select value={sf.attendance_status} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, attendance_status: e.target.value }))}
                                                                 className="bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500">
@@ -1009,20 +1071,29 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                     <option value="영상보강">영상보강</option>
                                                                     <option value="직접보강">직접보강</option>
                                                                 </select>
-                                                                {sf.makeupType && (
-                                                                    <div className="flex flex-1 items-center gap-1">
-                                                                        <input type="date" value={sf.makeupDate} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, makeupDate: e.target.value }))}
-                                                                            title={sf.makeupType === '영상보강' ? '영상배부일' : '보강예정일'}
-                                                                            className="w-full bg-black border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
-                                                                        <button onClick={() => {
-                                                                            const currentStr = sf.makeupDate || new Date().toISOString().split('T')[0];
-                                                                            const d = new Date(currentStr);
-                                                                            d.setDate(d.getDate() + 1);
-                                                                            updateStudentForm(student.id, prev => ({ ...prev, makeupDate: d.toISOString().split('T')[0] }));
-                                                                        }} className="px-1.5 py-1 bg-slate-800 text-slate-400 rounded-lg hover:bg-slate-700 text-[10px]">&gt;</button>
-                                                                    </div>
-                                                                )}
                                                             </div>
+                                                            {sf.makeupType === '영상보강' && (
+                                                                <div className="flex gap-1 mt-1">
+                                                                    <input type="date" value={sf.makeupDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, makeupDate: e.target.value }))}
+                                                                        className="flex-1 bg-indigo-500/10 border border-indigo-500/30 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-indigo-500 text-indigo-300 w-full cursor-pointer" />
+                                                                    <button onClick={() => {
+                                                                        const d = new Date(sf.makeupDate || new Date().toISOString().split('T')[0]);
+                                                                        d.setDate(d.getDate() + 1);
+                                                                        updateStudentForm(student.id, prev => ({ ...prev, makeupDate: d.toISOString().split('T')[0] }));
+                                                                    }} className="px-1.5 bg-slate-800 text-slate-400 rounded hover:bg-slate-700 text-[10px]">&gt;</button>
+                                                                </div>
+                                                            )}
+                                                            {sf.makeupType === '직접보강' && (
+                                                                <div className="flex gap-1 mt-1">
+                                                                    <input type="date" value={sf.makeupDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, makeupDate: e.target.value }))}
+                                                                        className="flex-1 bg-rose-500/10 border border-rose-500/30 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-rose-500 text-rose-300 w-full cursor-pointer" />
+                                                                    <button onClick={() => {
+                                                                        const d = new Date(sf.makeupDate || new Date().toISOString().split('T')[0]);
+                                                                        d.setDate(d.getDate() + 1);
+                                                                        updateStudentForm(student.id, prev => ({ ...prev, makeupDate: d.toISOString().split('T')[0] }));
+                                                                    }} className="px-1.5 bg-slate-800 text-slate-400 rounded hover:bg-slate-700 text-[10px]">&gt;</button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                     <textarea value={sf.teacher_comment} onChange={e => updateStudentForm(student.id, prev => ({ ...prev, teacher_comment: e.target.value }))}
@@ -1044,7 +1115,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 <label className="block text-xs text-slate-400 mb-1">수업 일자</label>
                                                 <div className="flex items-center gap-2">
                                                     <button onClick={handlePrevDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronLeft size={20} /></button>
-                                                    <input type="date" value={sharedForm.published_date} onChange={e => handleSharedChange('published_date', e.target.value)} className="input-field flex-1 text-sm px-2 cursor-pointer" />
+                                                    <input type="date" value={sharedForm.published_date} onClick={e => (e.target as any).showPicker?.()} onChange={e => handleSharedChange('published_date', e.target.value)} className="input-field flex-1 text-sm px-2 cursor-pointer" />
                                                     <button onClick={handleNextDay} className="p-2.5 bg-slate-900 border border-white/10 rounded-xl hover:bg-slate-800 transition-colors text-slate-400"><ChevronRight size={20} /></button>
                                                 </div>
                                             </div>
@@ -1185,11 +1256,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                                                         </button>
                                                                                                     ))}
                                                                                                     {ts.failAction === '추후 재시' && (
-                                                                                                        <input type="date" value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                                        <input type="date" value={ts.retestDate || ''} onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => {
                                                                                                             const newScores = [...prev.test_scores];
                                                                                                             newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
                                                                                                             return { ...prev, test_scores: newScores };
-                                                                                                        })} className="w-28 bg-black border border-white/10 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
+                                                                                                        })} className="w-28 bg-black border border-white/10 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200 cursor-pointer" />
                                                                                                     )}
                                                                                                 </div>
                                                                                             )}
@@ -1229,14 +1300,29 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         </div>
 
                                         {/* Next session */}
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-800/20 p-4 rounded-xl border border-white/5">
                                             <div>
-                                                <label className="block text-xs text-slate-400 mb-1">다음 수업 날짜</label>
-                                                <input type="text" value={sharedForm.next_date_str} onChange={e => handleSharedChange('next_date_str', e.target.value)} placeholder="3월 9일 월요일" className="input-field" />
+                                                <label className="block text-[10px] font-bold text-indigo-400 mb-1.5 uppercase tracking-wider">🗓️ 다음 수업 일자</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type="date"
+                                                        value={sharedForm.next_date_str}
+                                                        onClick={(e) => (e.target as any).showPicker?.()}
+                                                        onChange={(e) => handleSharedChange('next_date_str', e.target.value)}
+                                                        className="w-full bg-black border border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-indigo-100 focus:outline-none focus:border-indigo-500 cursor-pointer [color-scheme:dark]"
+                                                    />
+                                                    <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none" size={14} />
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs text-slate-400 mb-1">다음 숙제/내용 (자동 생성됨)</label>
-                                                <textarea value={sharedForm.next_content} onChange={e => handleSharedChange('next_content', e.target.value)} rows={2} placeholder="아래 과제 할당시 자동입력" className="input-field resize-none text-[10px]" />
+                                            <div className="md:col-span-2">
+                                                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">📝 다음 숙제 / 수업 내용 (자동 생성됨)</label>
+                                                <textarea
+                                                    value={sharedForm.next_content}
+                                                    onChange={(e) => handleSharedChange('next_content', e.target.value)}
+                                                    rows={1}
+                                                    placeholder="아래 과제 할당시 자동입력"
+                                                    className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500 resize-none min-h-[38px]"
+                                                />
                                             </div>
                                         </div>
 
@@ -1315,11 +1401,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                         return { ...prev, hw_statuses: newHw };
                                                     })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500 text-white" />
                                                     <div className="flex gap-1 items-center">
-                                                        <input type="date" value={hs.recheckDate || ''} title="재검사일" onChange={e => updateStudentForm(student.id, prev => {
+                                                        <input type="date" value={hs.recheckDate || ''} title="재검사일" onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => {
                                                             const newHw = [...prev.hw_statuses];
                                                             newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], recheckDate: e.target.value };
                                                             return { ...prev, hw_statuses: newHw };
-                                                        })} className="flex-1 bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200" />
+                                                        })} className="flex-1 bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200 cursor-pointer" />
                                                         <button onClick={() => {
                                                             const currentStr = hs.recheckDate || sharedForm.published_date || new Date().toISOString().split('T')[0];
                                                             const d = new Date(currentStr);
@@ -1362,7 +1448,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             <div className="p-4 border-b border-white/5 space-y-4">
                                 <div>
                                     <label className="block text-xs text-slate-400 mb-1">과제 점검일 (기본: 다음 수업 날짜)</label>
-                                    <input type="date" value={sharedForm.newAssignments[hwAssignIdx].checkDate} onChange={e => handleNewAssignChange(hwAssignIdx, 'checkDate', e.target.value)} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500" />
+                                    <input type="date" value={sharedForm.newAssignments[hwAssignIdx].checkDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => handleNewAssignChange(hwAssignIdx, 'checkDate', e.target.value)} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 cursor-pointer" />
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
@@ -1510,8 +1596,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             {/* Missing Assignment Tracker Modal */}
             <AnimatePresence>
                 {showTrackerModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+                        onClick={() => setShowTrackerModal(false)}
+                    >
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative"
+                        >
                             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950 shrink-0">
                                 <div>
                                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1520,7 +1612,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     </h3>
                                     <p className="text-xs text-slate-400 mt-1">해결되지 않은 과제와 재시험 예정인 항목들을 관리합니다.</p>
                                 </div>
-                                <button onClick={() => setShowTrackerModal(false)} className="p-2 bg-white/5 rounded-lg text-slate-300 hover:bg-white/10 transition-colors"><X size={20} /></button>
+                                <button type="button" onClick={() => setShowTrackerModal(false)} className="p-2 bg-white/5 rounded-lg text-slate-300 hover:bg-white/10 transition-colors cursor-pointer relative z-50"><X size={20} /></button>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-4 bg-slate-900/50">
@@ -1565,43 +1657,48 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 </div>
 
                                                 <div className="mt-auto pt-2 grid grid-cols-2 gap-2 border-t border-white/5">
-                                                    <button onClick={() => {
-                                                        try {
+                                                    <button type="button"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
                                                             if (window.confirm('완료된 항목을 목록에서 삭제하시겠습니까?')) {
                                                                 handleTrackerUpdate(item, 'COMPLETE', '');
                                                             }
-                                                        } catch (e: any) {
-                                                            alert("Error in Complete: " + e.message);
-                                                        }
-                                                    }} className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">
+                                                        }}
+                                                        className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-all cursor-pointer hover:scale-[1.02] active:scale-95 disabled:opacity-50 relative z-30 pointer-events-auto"
+                                                    >
                                                         {item.type === 'homework' ? '검사완료' : item.type === 'test' ? '통과' : '보강완료'}
                                                     </button>
 
                                                     {postponeStateId === item.id ? (
                                                         <div className="flex gap-1 items-center bg-black rounded p-1 border border-amber-500/30">
-                                                            <input type="date" value={postponeDate} onChange={e => setPostponeDate(e.target.value)} className="flex-1 bg-transparent border-none text-[10px] text-amber-200 outline-none w-full" />
-                                                            <button onClick={() => {
-                                                                if (postponeDate) handleTrackerUpdate(item, 'POSTPONE', postponeDate);
-                                                            }} className="bg-amber-500 text-black px-2 py-0.5 rounded font-bold text-[10px] shrink-0 hover:bg-amber-400">확인</button>
-                                                            <button onClick={() => setPostponeStateId(null)} className="text-slate-500 hover:text-white px-1 shrink-0"><X size={12} /></button>
+                                                            <input type="date" value={postponeDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => setPostponeDate(e.target.value)} className="flex-1 bg-transparent border-none text-[10px] text-amber-200 outline-none w-full cursor-pointer" />
+                                                            <button type="button" onClick={async () => {
+                                                                if (postponeDate) await handleTrackerUpdate(item, 'POSTPONE', postponeDate);
+                                                            }} className="bg-amber-500 text-black px-2 py-0.5 rounded font-bold text-[10px] shrink-0 hover:bg-amber-400 cursor-pointer">확인</button>
+                                                            <button type="button" onClick={() => setPostponeStateId(null)} className="text-slate-500 hover:text-white px-1 shrink-0 cursor-pointer"><X size={12} /></button>
                                                         </div>
                                                     ) : (
-                                                        <button onClick={() => {
-                                                            try {
+                                                        <button type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
                                                                 if (window.confirm('해당 미완과제를 재연기하시겠습니까?')) {
                                                                     setPostponeStateId(item.id);
-
-                                                                    // Calculate tomorrow
                                                                     const targetStr = item.targetDate || new Date().toISOString();
                                                                     const d = new Date(targetStr);
-                                                                    if (isNaN(d.getTime())) throw new Error("Invalid date: " + targetStr);
-                                                                    d.setDate(d.getDate() + 1);
-                                                                    setPostponeDate(d.toISOString().split('T')[0]);
+                                                                    if (isNaN(d.getTime())) {
+                                                                        const fallback = new Date();
+                                                                        fallback.setDate(fallback.getDate() + 1);
+                                                                        setPostponeDate(fallback.toISOString().split('T')[0]);
+                                                                    } else {
+                                                                        d.setDate(d.getDate() + 1);
+                                                                        setPostponeDate(d.toISOString().split('T')[0]);
+                                                                    }
                                                                 }
-                                                            } catch (e: any) {
-                                                                alert("Error in Postpone: " + e.message);
-                                                            }
-                                                        }} className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs py-1.5 rounded-md font-bold transition-colors">
+                                                            }}
+                                                            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs py-1.5 rounded-md font-bold transition-all cursor-pointer hover:scale-[1.02] active:scale-95 relative z-30 pointer-events-auto"
+                                                        >
                                                             추가연기
                                                         </button>
                                                     )}
@@ -1610,6 +1707,74 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                         ))}
                                     </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Student Settings Modal */}
+            <AnimatePresence>
+                {showStudentSettings && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowStudentSettings(null)}>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onClick={e => e.stopPropagation()}
+                            className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-md overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                    <Settings size={16} className="text-rose-400" />
+                                    학생 정보 설정
+                                </h3>
+                                <button onClick={() => setShowStudentSettings(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+                            </div>
+
+                            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-1">이름</label>
+                                    <input value={editingStudent.name} onChange={e => setEditingStudent(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                </div>
+                                {activeClass?.students.find(s => s.id === showStudentSettings)?.password !== null && (
+                                    <div>
+                                        <label className="block text-xs text-slate-400 mb-1">비밀번호 (현재: {activeClass?.students.find(s => s.id === showStudentSettings)?.password || '미설정'})</label>
+                                        <input value={editingStudent.password} onChange={e => setEditingStudent(prev => ({ ...prev, password: e.target.value }))}
+                                            placeholder="변경할 비밀번호" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-slate-400 mb-1">학생 번호</label>
+                                        <input value={editingStudent.student_phone} onChange={e => setEditingStudent(prev => ({ ...prev, student_phone: e.target.value }))}
+                                            placeholder="010-0000-0000" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-slate-400 mb-1">학부모 번호</label>
+                                        <input value={editingStudent.parent_phone} onChange={e => setEditingStudent(prev => ({ ...prev, parent_phone: e.target.value }))}
+                                            placeholder="010-0000-0000" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-1">특이사항</label>
+                                    <textarea value={editingStudent.notes} onChange={e => setEditingStudent(prev => ({ ...prev, notes: e.target.value }))}
+                                        placeholder="학생 관련 메모" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500 min-h-[100px]" />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-slate-950 flex gap-2">
+                                <button onClick={() => setShowStudentSettings(null)} className="flex-1 py-2 rounded-xl border border-white/10 text-slate-400 hover:text-white transition-colors text-sm">취소</button>
+                                <button onClick={async () => {
+                                    try {
+                                        setIsSaving(true);
+                                        await updateStudent(showStudentSettings, editingStudent);
+                                        alert('성공적으로 업데이트되었습니다.');
+                                        setShowStudentSettings(null);
+                                    } catch (err: any) {
+                                        alert('업데이트 실패: ' + err.message);
+                                    } finally {
+                                        setIsSaving(false);
+                                    }
+                                }} disabled={isSaving} className="flex-initial px-8 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 rounded-xl text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                                    {isSaving ? <><div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> 저장 중</> : '저장하기'}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
