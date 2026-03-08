@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Lock, X, Plus, Trash2, Edit3, Save, LayoutDashboard, Calendar, FileText, CheckCircle2, Upload, Image as ImageIcon, FileSpreadsheet, ChevronLeft, ChevronRight, Users, ClipboardCheck, Download } from 'lucide-react';
 
 // --- Types ---
-const HW_STATUSES = ['확인완료', '교재미지참', '전체미완', '일부미완', '미완 후 보충완료'] as const;
+const HW_STATUSES = ['확인완료', '교재미지참', '전체미완', '일부미완', '미완 후 보충완료', '결석'] as const;
 type HwStatus = typeof HW_STATUSES[number];
 
 interface StudentFormData {
@@ -13,15 +13,15 @@ interface StudentFormData {
     attendance_time: string;
     attendance_reason: string;
     hw_statuses: { status: HwStatus; plan: string }[];
-    test_scores: { score: string; wordTestResult?: 'pass' | 'fail'; failAction?: '재시험 완료' | '추후 재시'; retestDate?: string }[];
+    test_scores: { score: string; wordTestResult?: 'pass' | 'fail'; failAction?: '해당없음' | '재시험 완료' | '추후 재시'; retestDate?: string }[];
     teacher_comment: string;
 }
 
 interface SharedFormData {
     published_date: string;
     lesson_content: string;
-    homeworks: { name: string }[];
-    tests: { name: string; desc: string; total: string; cutline: string; isWordTest: boolean }[];
+    homeworks: { name: string; assignees: string[]; checkDate: string; isWordOrTest: boolean }[];
+    tests: { name: string; desc: string; total: string; cutline: string; isWordTest: boolean; assignees: string[] }[];
     test_images: string[];
     next_date_str: string;
     next_content: string;
@@ -58,15 +58,24 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [showReportHistory, setShowReportHistory] = useState<string | null>(null);
     const [studentReportsList, setStudentReportsList] = useState<any[]>([]);
 
+    // Missing Assignment Tracker
+    const [showTrackerModal, setShowTrackerModal] = useState(false);
+    const [trackerData, setTrackerData] = useState<any[]>([]);
+    const [isTrackerLoading, setIsTrackerLoading] = useState(false);
+
     // Homework status modal
     const [hwModalIdx, setHwModalIdx] = useState<number | null>(null);
+
+    // Assignment modals
+    const [hwAssignIdx, setHwAssignIdx] = useState<number | null>(null);
+    const [testAssignIdx, setTestAssignIdx] = useState<number | null>(null);
 
     // --- Shared form data ---
     const [sharedForm, setSharedForm] = useState<SharedFormData>({
         published_date: new Date().toISOString().split('T')[0],
         lesson_content: '',
-        homeworks: [{ name: '' }],
-        tests: [{ name: '', desc: '', total: '', cutline: '', isWordTest: false }],
+        homeworks: [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
+        tests: [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
         test_images: [],
         next_date_str: '',
         next_content: ''
@@ -111,7 +120,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     };
 
     const addHomework = () => {
-        const newHw = [...sharedForm.homeworks, { name: '' }];
+        const newHw = [...sharedForm.homeworks, { name: '', assignees: activeClass ? activeClass.students.map(s => s.id) : [], checkDate: sharedForm.published_date, isWordOrTest: false }];
         setSharedForm(prev => ({ ...prev, homeworks: newHw }));
         syncStudentFormsToShared(newHw, sharedForm.tests);
     };
@@ -127,14 +136,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             return updated;
         });
     };
-    const handleHwNameChange = (idx: number, value: string) => {
+    const handleHwSharedChange = (idx: number, field: keyof SharedFormData['homeworks'][number], value: any) => {
         const newHw = [...sharedForm.homeworks];
-        newHw[idx] = { ...newHw[idx], name: value };
+        newHw[idx] = { ...newHw[idx], [field]: value };
         setSharedForm(prev => ({ ...prev, homeworks: newHw }));
     };
 
     const addTest = () => {
-        const newTests = [...sharedForm.tests, { name: '', desc: '', total: '', cutline: '', isWordTest: false }];
+        const newTests = [...sharedForm.tests, { name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: activeClass ? activeClass.students.map(s => s.id) : [] }];
         setSharedForm(prev => ({ ...prev, tests: newTests }));
         syncStudentFormsToShared(sharedForm.homeworks, newTests);
     };
@@ -163,6 +172,50 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             [studentId]: updater(prev[studentId] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length))
         }));
     };
+
+    // --- Auto-generate next homework text ---
+    const generateNextHomeworkText = (homeworks: SharedFormData['homeworks']) => {
+        if (!activeClass) return '';
+
+        const allStudentIds = activeClass.students.map(s => s.id);
+        const globalHws: string[] = [];
+        const individualHws: Record<string, string[]> = {}; // Map of student name -> homework names
+
+        homeworks.forEach(hw => {
+            if (!hw.name || hw.isWordOrTest) return; // Skip empty or word/test homeworks
+
+            const isGlobal = hw.assignees.length === allStudentIds.length && allStudentIds.every(id => hw.assignees.includes(id));
+            if (isGlobal || hw.assignees.length === 0) { // Assume empty assignees = global during creation if not explicitly set initially
+                globalHws.push(hw.name);
+            } else {
+                hw.assignees.forEach(studentId => {
+                    const student = activeClass?.students.find(s => s.id === studentId);
+                    if (student) {
+                        if (!individualHws[student.name]) individualHws[student.name] = [];
+                        individualHws[student.name].push(hw.name);
+                    }
+                });
+            }
+        });
+
+        let text = '';
+        if (globalHws.length > 0) {
+            text += '<전체>\n' + globalHws.map(name => `• ${name}`).join('\n') + '\n';
+        }
+
+        Object.keys(individualHws).forEach(studentName => {
+            text += `\n<${studentName} 개별과제>\n` + individualHws[studentName].map(name => `• ${name}`).join('\n') + '\n';
+        });
+
+        return text.trim();
+    };
+
+    // Update next_content when homeworks change or are saved
+    React.useEffect(() => {
+        if (activeClass) {
+            handleSharedChange('next_content', generateNextHomeworkText(sharedForm.homeworks));
+        }
+    }, [sharedForm.homeworks, activeClass]);
 
     // --- Auto-calculate average for a test (excluding blank scores) ---
     const calcAvg = (testIdx: number): number => {
@@ -225,7 +278,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         }
     };
 
-    // --- Load existing reports for current date ---
+    // --- Load existing reports for current date + Load past assignments based on checkDate ---
     const handleLoadReports = async () => {
         if (!activeClass) return;
         setIsLoadingReports(true);
@@ -233,9 +286,13 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         try {
             let sharedLoaded = false;
             const newStudentForms: Record<string, StudentFormData> = {};
+            let fetchedPastAssignments: SharedFormData['homeworks'] = [];
 
+            // 1. Fetch current date reports to load existing data for today
             for (const student of activeClass.students) {
                 const reports = await fetchStudentReports(student.id);
+
+                // Find report for today
                 const matchingReport = reports.find(
                     r => r.reportType === reportType && r.publishedDate === sharedForm.published_date
                 );
@@ -248,10 +305,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         setSharedForm(prev => ({
                             ...prev,
                             lesson_content: raw.lesson_content || '',
-                            homeworks: (raw.homeworks && raw.homeworks.length > 0) ? raw.homeworks : [{ name: '' }],
+                            homeworks: (raw.homeworks && raw.homeworks.length > 0) ? raw.homeworks : [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
                             tests: (raw.tests && raw.tests.length > 0)
-                                ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false }))
-                                : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false }],
+                                ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false, assignees: t.assignees || [] }))
+                                : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
                             test_images: raw.test_images || [],
                             next_date_str: raw.next_date_str || '',
                             next_content: raw.next_content || ''
@@ -279,10 +336,59 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     // No report for this student on this date — use defaults
                     newStudentForms[student.id] = defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
                 }
+
+                // 2. While we are fetching reports for this student, let's also look for PAST assignments where checkDate === TODAY
+                // and it is NOT a word/test assignment.
+                const pastReportsWithIncomingAssignments = reports.filter(
+                    r => r.reportType === reportType && r.publishedDate !== sharedForm.published_date && r.rawDataJson?.homeworks
+                );
+
+                pastReportsWithIncomingAssignments.forEach(pr => {
+                    const hws = pr.rawDataJson.homeworks as SharedFormData['homeworks'];
+                    hws.forEach(hw => {
+                        if (hw.name && hw.checkDate === sharedForm.published_date && !hw.isWordOrTest) {
+                            // Only add if it's assigned to this student (or everyone) and we haven't added it yet
+                            const isAssignedToThisStudent = hw.assignees.length === 0 || hw.assignees.includes(student.id);
+                            const alreadyAdded = fetchedPastAssignments.some(existing => existing.name === hw.name && existing.checkDate === hw.checkDate);
+
+                            if (isAssignedToThisStudent && !alreadyAdded) {
+                                fetchedPastAssignments.push(hw);
+                            }
+                        }
+                    });
+                });
             }
 
-            setStudentForms(newStudentForms);
-            alert(`✅ ${sharedForm.published_date} 리포트 데이터를 불러왔습니다.`);
+            // 3. Merge fetched past assignments into the shared form
+            if (fetchedPastAssignments.length > 0) {
+                setSharedForm(prev => {
+                    const currentHomeworks = prev.homeworks.filter(hw => hw.name.trim() !== '');
+
+                    // Filter out any fetched assignments that are *already* in the current homework list (by name) to avoid duplicates if re-loading
+                    const newUniqueAssignments = fetchedPastAssignments.filter(fetched =>
+                        !currentHomeworks.some(existing => existing.name === fetched.name)
+                    );
+
+                    const mergedHomeworks = [...currentHomeworks, ...newUniqueAssignments];
+
+                    if (mergedHomeworks.length === 0) {
+                        mergedHomeworks.push({ name: '', assignees: [], checkDate: '', isWordOrTest: false });
+                    }
+
+                    // Sync student forms to accommodate expanding homework array
+                    setTimeout(() => syncStudentFormsToShared(mergedHomeworks, prev.tests), 0);
+
+                    return {
+                        ...prev,
+                        homeworks: mergedHomeworks
+                    };
+                });
+                alert(`✅ ${sharedForm.published_date} 리포트 데이터 및 점검일이 오늘인 이전 과제 ${fetchedPastAssignments.length}개를 불러왔습니다.`);
+            } else {
+                setStudentForms(newStudentForms);
+                alert(`✅ ${sharedForm.published_date} 리포트 데이터를 불러왔습니다.`);
+            }
+
         } catch (err) {
             console.error('Load error:', err);
             alert('⚠️ 데이터 불러오기에 실패했습니다.');
@@ -317,12 +423,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
             let templateHtml = baseTemplate;
 
-            // Build homework HTML
+            // Build homework HTML (Filter out word/test assignments)
             let hwHtml = '';
             sharedForm.homeworks.forEach((hw, idx) => {
-                if (!hw.name) return;
+                if (!hw.name || hw.isWordOrTest) return; // Skip word/test assignments
                 const sts = sf.hw_statuses[idx];
                 if (!sts) return;
+
+                // Only include if assigned to this student (or everyone)
+                if (hw.assignees.length > 0 && !hw.assignees.includes(student.id)) return;
+
                 const badgeClass = (sts.status === '확인완료' || sts.status === '미완 후 보충완료') ? 'badge-blue' : 'badge-red';
                 hwHtml += `
         <div style="margin-bottom: 12px;">
@@ -338,13 +448,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             let testsHtml = '';
             sharedForm.tests.forEach((test, idx) => {
                 if (!test.name) return;
+
+                // Only include if assigned to this student (or everyone)
+                if (test.assignees.length > 0 && !test.assignees.includes(student.id)) return;
+
                 const ts = sf.test_scores[idx];
                 if (!ts) return;
                 const scoreNowNum = parseFloat(ts.score) || 0;
                 const scoreTotalNum = parseFloat(test.total) || 100;
                 const avgScore = calcAvg(idx);
                 const scorePercent = scoreTotalNum > 0 ? (scoreNowNum / scoreTotalNum) * 100 : 0;
-                const avgPercent = scoreTotalNum > 0 ? (avgScore / scoreTotalNum) * 100 : 0;
+                const avgPercent = scoreTotalNum > 0 ? (scoreTotalNum > 0 ? (avgScore / scoreTotalNum) * 100 : 0) : 0;
                 const isBelowAvg = scoreNowNum < avgScore;
 
                 // Auto-determine pass/fail for word tests
@@ -352,7 +466,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 if (test.isWordTest && test.cutline) {
                     const cutlineNum = parseFloat(test.cutline) || 0;
                     if (ts.score !== '') {
-                        wordTestResult = scoreNowNum >= cutlineNum ? 'pass' : 'fail';
+                        wordTestResult = isFinite(scoreNowNum) && scoreNowNum >= cutlineNum ? 'pass' : 'fail';
                     }
                 }
 
@@ -464,6 +578,123 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         else { setError(true); setTimeout(() => setError(false), 1000); }
     };
 
+    // --- Tracker Logic ---
+    const loadMissingTrackerData = async () => {
+        setIsTrackerLoading(true);
+        try {
+            const incompleteItems: any[] = [];
+
+            // Loop through all classes and students
+            for (const cls of classes) {
+                for (const student of cls.students) {
+                    const reports = await fetchStudentReports(student.id);
+
+                    reports.forEach(report => {
+                        const raw = report.rawDataJson;
+                        if (!raw) return;
+
+                        // 1. Check Missing Homeworks
+                        if (raw.homeworks && raw.hw_statuses) {
+                            raw.homeworks.forEach((hw: any, idx: number) => {
+                                const isAssigned = !hw.assignees || hw.assignees.length === 0 || hw.assignees.includes(student.id);
+                                if (isAssigned && hw.name) {
+                                    const status = raw.hw_statuses[idx]?.status;
+                                    const plan = raw.hw_statuses[idx]?.plan;
+                                    // Identify incomplete states
+                                    if (status === '교재미지참' || status === '전체미완' || status === '일부미완' || status === '결석') {
+                                        incompleteItems.push({
+                                            id: `${report.id}-hw-${idx}`,
+                                            reportId: report.id,
+                                            studentId: student.id,
+                                            studentName: student.name,
+                                            className: cls.name,
+                                            date: report.publishedDate,
+                                            type: 'homework',
+                                            name: hw.name,
+                                            status: status,
+                                            plan: plan,
+                                            isWordOrTest: hw.isWordOrTest,
+                                            rawIndex: idx
+                                        });
+                                    }
+                                }
+                            });
+                        }
+
+                        // 2. Check Failed/Postponed Word Tests
+                        if (raw.tests && raw.test_scores) {
+                            raw.tests.forEach((test: any, idx: number) => {
+                                const isAssigned = !test.assignees || test.assignees.length === 0 || test.assignees.includes(student.id);
+                                if (isAssigned && test.name && test.isWordTest) {
+                                    const ts = raw.test_scores[idx];
+                                    if (ts && ts.failAction === '추후 재시') {
+                                        incompleteItems.push({
+                                            id: `${report.id}-test-${idx}`,
+                                            reportId: report.id,
+                                            studentId: student.id,
+                                            studentName: student.name,
+                                            className: cls.name,
+                                            date: report.publishedDate,
+                                            type: 'test',
+                                            name: test.name,
+                                            status: ts.failAction,
+                                            plan: `재시험일: ${ts.retestDate || '미정'}`,
+                                            score: ts.score,
+                                            rawIndex: idx
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+
+            // Sort by date descending
+            incompleteItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setTrackerData(incompleteItems);
+        } catch (error) {
+            console.error('Failed to load tracker data', error);
+        }
+        setIsTrackerLoading(false);
+    };
+
+    const handleTrackerUpdate = async (item: any, newStatus: string) => {
+        try {
+            // Find the original report
+            const { data: reportData, error } = await supabase.from('student_reports').select('*').eq('id', item.reportId).single();
+            if (error || !reportData) throw new Error('Cannot find report');
+
+            const rawJson = reportData.raw_data_json || {};
+
+            if (item.type === 'homework') {
+                if (rawJson.hw_statuses && rawJson.hw_statuses[item.rawIndex]) {
+                    rawJson.hw_statuses[item.rawIndex].status = newStatus;
+                    if (newStatus === '미완 후 보충완료') {
+                        rawJson.hw_statuses[item.rawIndex].plan = '보충완료'; // Clear or update plan
+                    }
+                }
+            } else if (item.type === 'test') {
+                if (rawJson.test_scores && rawJson.test_scores[item.rawIndex]) {
+                    rawJson.test_scores[item.rawIndex].failAction = newStatus;
+                }
+            }
+
+            // Update in Supabase (we are not updating the HTML here, only the raw data so it doesn't show up in tracker)
+            // Note: In a full system, we might want to regenerate the HTML report if the status changes, but for now we just update DB to clear the flag.
+            const { error: updateError } = await supabase.from('student_reports').update({ raw_data_json: rawJson }).eq('id', item.reportId);
+
+            if (updateError) throw updateError;
+
+            // Remove from local tracker state
+            setTrackerData(prev => prev.filter(i => i.id !== item.id));
+
+        } catch (error) {
+            console.error('Failed to update tracker item', error);
+            alert('업데이트 실패했습니다.');
+        }
+    };
+
     if (!isAuthenticated) {
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -495,6 +726,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button onClick={() => { setShowTrackerModal(true); loadMissingTrackerData(); }} className="flex items-center gap-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 px-3 py-2 rounded-lg text-xs font-bold border border-rose-500/30 transition-colors">
+                        <FileText size={14} /> 미완과제 추적기
+                    </button>
                     <button disabled className="flex items-center gap-1.5 bg-white/5 text-slate-500 px-3 py-2 rounded-lg text-xs font-medium border border-white/5 cursor-not-allowed opacity-50"><FileSpreadsheet size={14} /> Excel Import</button>
                     <button onClick={onClose} className="p-2 bg-white/5 rounded-lg text-slate-300 hover:bg-white/10 transition-colors"><X size={20} /></button>
                 </div>
@@ -649,13 +883,19 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                             <div className="space-y-2">
                                                 {sharedForm.homeworks.map((hw, idx) => (
                                                     <div key={idx} className="flex gap-2 items-center">
-                                                        <input value={hw.name} onChange={e => handleHwNameChange(idx, e.target.value)} placeholder={`과제 ${idx + 1} (예: 워크북 17~63p)`}
+                                                        <input value={hw.name} onChange={e => handleHwSharedChange(idx, 'name', e.target.value)} placeholder={`과제 ${idx + 1} (예: 워크북 17~63p)`}
                                                             className="flex-1 bg-black border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
                                                         {hw.name && (
-                                                            <button onClick={() => setHwModalIdx(idx)}
-                                                                className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
-                                                                <ClipboardCheck size={14} /> 체크
-                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button onClick={() => setHwAssignIdx(idx)}
+                                                                    className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-indigo-500/20 transition-colors whitespace-nowrap">
+                                                                    <Users size={14} /> 과제할당
+                                                                </button>
+                                                                <button onClick={() => setHwModalIdx(idx)}
+                                                                    className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
+                                                                    <ClipboardCheck size={14} /> 상태체크
+                                                                </button>
+                                                            </div>
                                                         )}
                                                         {sharedForm.homeworks.length > 1 && (
                                                             <button onClick={() => removeHomework(idx)} className="text-slate-600 hover:text-rose-400 p-1"><X size={16} /></button>
@@ -676,9 +916,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     const avg = calcAvg(idx);
                                                     return (
                                                         <div key={idx} className="bg-black border border-white/5 rounded-xl p-4 relative group space-y-3">
-                                                            {sharedForm.tests.length > 1 && (
-                                                                <button onClick={() => removeTest(idx)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-400 hover:text-rose-400 p-1 rounded-full border border-slate-700 opacity-0 group-hover:opacity-100"><X size={12} /></button>
-                                                            )}
+                                                            <div className="absolute top-2 right-2 flex items-center gap-2">
+                                                                <button onClick={() => setTestAssignIdx(idx)} className="text-[10px] flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-2 py-1 rounded border border-indigo-500/20 transition-colors">
+                                                                    <Users size={12} /> 응시자
+                                                                </button>
+                                                                {sharedForm.tests.length > 1 && (
+                                                                    <button onClick={() => removeTest(idx)} className="text-slate-500 hover:text-rose-400 p-1"><X size={14} /></button>
+                                                                )}
+                                                            </div>
                                                             {/* Test config row */}
                                                             <div className="grid grid-cols-12 gap-2">
                                                                 <div className="col-span-4">
@@ -705,22 +950,36 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                             {/* Inline student scores */}
                                                             {test.name && activeClass && (
                                                                 <div className="border-t border-white/5 pt-2 space-y-1">
-                                                                    {activeClass.students.map(student => {
+                                                                    {activeClass.students.filter(student => test.assignees.includes(student.id) || test.assignees.length === 0).map(student => {
                                                                         const sf = studentForms[student.id];
                                                                         const ts = sf?.test_scores[idx] || { score: '' };
                                                                         const scoreNum = parseFloat(ts.score) || 0;
                                                                         const cutlineNum = parseFloat(test.cutline) || 0;
-                                                                        const isFail = test.isWordTest && test.cutline && ts.score !== '' && scoreNum < cutlineNum;
+                                                                        const isFail = test.isWordTest && test.cutline && ts.score !== '' && isFinite(scoreNum) && scoreNum < cutlineNum;
                                                                         return (
                                                                             <div key={student.id} className="flex items-center gap-2">
                                                                                 <span className="text-[10px] text-slate-500 w-16 truncate">{student.name}</span>
-                                                                                <input type="number" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                    const newScores = [...prev.test_scores];
-                                                                                    newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                    return { ...prev, test_scores: newScores };
-                                                                                })} placeholder="—" className={`w-14 bg-slate-900 border rounded px-2 py-1 text-xs font-bold focus:outline-none ${isFail ? 'border-rose-500/40 text-rose-400' : 'border-white/5 text-emerald-400'} focus:border-rose-500`} />
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <input type="text" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                        const newScores = [...prev.test_scores];
+                                                                                        newScores[idx] = { ...newScores[idx], score: e.target.value };
+                                                                                        return { ...prev, test_scores: newScores };
+                                                                                    })} placeholder="—" className={`w-14 bg-slate-900 border rounded px-2 py-1 text-xs font-bold focus:outline-none ${isFail ? 'border-rose-500/40 text-rose-400' : 'border-white/5 text-emerald-400'} focus:border-rose-500`} />
+
+                                                                                    <select value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                        const newScores = [...prev.test_scores];
+                                                                                        newScores[idx] = { ...newScores[idx], score: e.target.value };
+                                                                                        return { ...prev, test_scores: newScores };
+                                                                                    })} className="bg-slate-900 border border-white/5 rounded px-1 py-1 text-[9px] text-slate-400 focus:outline-none">
+                                                                                        <option value="">(직접입력)</option>
+                                                                                        <option value="해당없음">해당없음</option>
+                                                                                        <option value="미응시(결석)">미응시(결석)</option>
+                                                                                        <option value="연기">연기</option>
+                                                                                    </select>
+                                                                                </div>
+
                                                                                 {isFail && <span className="text-[9px] text-rose-400 font-bold">FAIL</span>}
-                                                                                {test.isWordTest && ts.score !== '' && !isFail && <span className="text-[9px] text-emerald-400 font-bold">PASS</span>}
+                                                                                {test.isWordTest && ts.score !== '' && !isFail && !isNaN(scoreNum) && <span className="text-[9px] text-emerald-400 font-bold">PASS</span>}
                                                                                 {/* Fail actions for word test */}
                                                                                 {isFail && (
                                                                                     <div className="flex items-center gap-1 ml-1">
@@ -734,11 +993,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                                             </button>
                                                                                         ))}
                                                                                         {ts.failAction === '추후 재시' && (
-                                                                                            <input value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                            <input type="date" value={ts.retestDate || ''} onChange={e => updateStudentForm(student.id, prev => {
                                                                                                 const newScores = [...prev.test_scores];
                                                                                                 newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
                                                                                                 return { ...prev, test_scores: newScores };
-                                                                                            })} placeholder="재시험일" className="w-16 bg-slate-900 border border-white/5 rounded px-1 py-0.5 text-[9px] focus:outline-none focus:border-rose-500" />
+                                                                                            })} className="w-24 bg-slate-900 border border-white/5 rounded px-1 py-0.5 text-[9px] focus:outline-none focus:border-rose-500 text-slate-300" />
                                                                                         )}
                                                                                     </div>
                                                                                 )}
@@ -809,10 +1068,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                 <button onClick={() => setHwModalIdx(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                {activeClass.students.map(student => {
+                                {activeClass.students.filter(s => sharedForm.homeworks[hwModalIdx!].assignees.includes(s.id) || sharedForm.homeworks[hwModalIdx!].assignees.length === 0).map(student => {
                                     const sf = studentForms[student.id];
                                     const hs = sf?.hw_statuses[hwModalIdx!] || { status: '확인완료' as HwStatus, plan: '' };
-                                    const needsPlan = hs.status === '교재미지참' || hs.status === '전체미완' || hs.status === '일부미완';
+                                    const needsPlan = hs.status === '교재미지참' || hs.status === '전체미완' || hs.status === '일부미완' || hs.status === '결석';
                                     return (
                                         <div key={student.id} className="bg-black/30 border border-white/5 rounded-xl px-4 py-3 space-y-2">
                                             <div className="flex items-center justify-between gap-2">
@@ -831,7 +1090,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     const newHw = [...prev.hw_statuses];
                                                     newHw[hwModalIdx!] = { ...newHw[hwModalIdx!], plan: e.target.value };
                                                     return { ...prev, hw_statuses: newHw };
-                                                })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500" />
+                                                })} placeholder="보완계획 입력" className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-rose-500 text-white" />
                                             )}
                                         </div>
                                     );
@@ -839,6 +1098,120 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             </div>
                             <div className="p-3 border-t border-white/10">
                                 <button onClick={() => setHwModalIdx(null)} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-bold transition-colors">완료</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Homework Assignment Modal */}
+            <AnimatePresence>
+                {hwAssignIdx !== null && activeClass && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setHwAssignIdx(null)}>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onClick={e => e.stopPropagation()}
+                            className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-white text-sm">과제 할당 및 설정</h3>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{sharedForm.homeworks[hwAssignIdx]?.name}</p>
+                                </div>
+                                <button onClick={() => setHwAssignIdx(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+                            </div>
+
+                            <div className="p-4 border-b border-white/5 space-y-4">
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-1">과제 점검일 (기본: 오늘 리포트 작성일)</label>
+                                    <input type="date" value={sharedForm.homeworks[hwAssignIdx].checkDate} onChange={e => handleHwSharedChange(hwAssignIdx, 'checkDate', e.target.value)} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                                        <input type="checkbox" checked={sharedForm.homeworks[hwAssignIdx].isWordOrTest} onChange={e => handleHwSharedChange(hwAssignIdx, 'isWordOrTest', e.target.checked)} className="rounded bg-black border-white/20" />
+                                        단어 암기 또는 테스트 여부
+                                    </label>
+                                    <span className="text-[10px] text-slate-500">(체크 시 리포트에 출력되지 않습니다)</span>
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-b border-white/5 bg-slate-950 flex justify-between items-center">
+                                <h4 className="text-xs font-bold text-slate-300">학생 할당</h4>
+                                <button onClick={() => {
+                                    const allIds = activeClass!.students.map(s => s.id);
+                                    const isAllAssigned = sharedForm.homeworks[hwAssignIdx].assignees.length === allIds.length;
+                                    handleHwSharedChange(hwAssignIdx, 'assignees', isAllAssigned ? [] : allIds);
+                                }} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded transition-colors">
+                                    {sharedForm.homeworks[hwAssignIdx].assignees.length === activeClass.students.length ? '전체 해제' : '전체 선택'}
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
+                                {activeClass.students.map(student => {
+                                    const isAssigned = sharedForm.homeworks[hwAssignIdx].assignees.includes(student.id);
+                                    return (
+                                        <button key={student.id} onClick={() => {
+                                            const newAssignees = isAssigned
+                                                ? sharedForm.homeworks[hwAssignIdx].assignees.filter(id => id !== student.id)
+                                                : [...sharedForm.homeworks[hwAssignIdx].assignees, student.id];
+                                            handleHwSharedChange(hwAssignIdx, 'assignees', newAssignees);
+                                        }} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-colors ${isAssigned ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-100' : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/10'}`}>
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isAssigned ? 'border-indigo-400 bg-indigo-500' : 'border-slate-600'}`}>
+                                                {isAssigned && <CheckCircle2 size={10} className="text-white" />}
+                                            </div>
+                                            <span className="text-sm font-medium">{student.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="p-3 border-t border-white/10">
+                                <button onClick={() => setHwAssignIdx(null)} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-bold transition-colors">저장 후 닫기</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Test Assignment Modal */}
+            <AnimatePresence>
+                {testAssignIdx !== null && activeClass && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTestAssignIdx(null)}>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onClick={e => e.stopPropagation()}
+                            className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-white text-sm">테스트 응시자 할당</h3>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{sharedForm.tests[testAssignIdx]?.name}</p>
+                                </div>
+                                <button onClick={() => setTestAssignIdx(null)} className="text-slate-400 hover:text-white"><X size={18} /></button>
+                            </div>
+
+                            <div className="p-4 border-b border-white/5 bg-slate-950 flex justify-between items-center">
+                                <h4 className="text-xs font-bold text-slate-300">학생 할당</h4>
+                                <button onClick={() => {
+                                    const allIds = activeClass!.students.map(s => s.id);
+                                    const isAllAssigned = sharedForm.tests[testAssignIdx].assignees.length === allIds.length;
+                                    handleTestSharedChange(testAssignIdx, 'assignees', isAllAssigned ? [] : allIds);
+                                }} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded transition-colors">
+                                    {sharedForm.tests[testAssignIdx].assignees.length === activeClass.students.length ? '전체 해제' : '전체 선택'}
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
+                                {activeClass.students.map(student => {
+                                    const isAssigned = sharedForm.tests[testAssignIdx].assignees.includes(student.id);
+                                    return (
+                                        <button key={student.id} onClick={() => {
+                                            const newAssignees = isAssigned
+                                                ? sharedForm.tests[testAssignIdx].assignees.filter(id => id !== student.id)
+                                                : [...sharedForm.tests[testAssignIdx].assignees, student.id];
+                                            handleTestSharedChange(testAssignIdx, 'assignees', newAssignees);
+                                        }} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-colors ${isAssigned ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-100' : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/10'}`}>
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isAssigned ? 'border-emerald-400 bg-emerald-500' : 'border-slate-600'}`}>
+                                                {isAssigned && <CheckCircle2 size={10} className="text-white" />}
+                                            </div>
+                                            <span className="text-sm font-medium">{student.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="p-3 border-t border-white/10">
+                                <button onClick={() => setTestAssignIdx(null)} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-bold transition-colors">저장 후 닫기</button>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -893,6 +1266,81 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 .input-field:focus { border-color: #f43f5e; }
                 .input-field::placeholder { color: #475569; }
             `}</style>
+            {/* Missing Assignment Tracker Modal */}
+            <AnimatePresence>
+                {showTrackerModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-slate-900 rounded-2xl border border-white/10 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+                            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-950 shrink-0">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <FileText className="text-rose-400" size={20} />
+                                        미완과제 & 재시험 추적기
+                                    </h3>
+                                    <p className="text-xs text-slate-400 mt-1">해결되지 않은 과제와 재시험 예정인 항목들을 관리합니다.</p>
+                                </div>
+                                <button onClick={() => setShowTrackerModal(false)} className="p-2 bg-white/5 rounded-lg text-slate-300 hover:bg-white/10 transition-colors"><X size={20} /></button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 bg-slate-900/50">
+                                {isTrackerLoading ? (
+                                    <div className="flex flex-col flex-1 items-center justify-center text-slate-400 py-20">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500 mb-4"></div>
+                                        데이터를 불러오는 중입니다...
+                                    </div>
+                                ) : trackerData.length === 0 ? (
+                                    <div className="flex flex-col flex-1 items-center justify-center text-slate-500 py-20">
+                                        <CheckCircle2 size={48} className="text-emerald-500/40 mb-4" />
+                                        <p>모든 학생이 과제와 시험을 완료했습니다!</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {trackerData.map((item) => (
+                                            <div key={item.id} className="bg-black/50 border border-white/10 rounded-xl p-4 flex flex-col space-y-3 relative group">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="text-xs font-bold text-white">{item.studentName}</span>
+                                                        <span className="text-[10px] text-slate-400 ml-2">{item.className}</span>
+                                                    </div>
+                                                    <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">{item.date}</span>
+                                                </div>
+
+                                                <div className="flex items-start gap-2">
+                                                    <div className={`mt-0.5 w-1.5 h-1.5 rounded-full ${item.type === 'homework' ? 'bg-amber-400' : 'bg-rose-400'}`}></div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-slate-200 line-clamp-2">{item.name}</p>
+                                                        {item.type === 'test' && <p className="text-xs text-rose-400 font-bold mt-0.5">SCORE: {item.score}</p>}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-900 rounded-lg p-2 text-[10px] text-slate-400">
+                                                    <span className={`font-bold ${item.type === 'homework' ? 'text-amber-400' : 'text-rose-400'}`}>상태: </span>
+                                                    {item.status}
+                                                    {item.plan && <p className="mt-1 text-slate-300">계획: {item.plan}</p>}
+                                                </div>
+
+                                                <div className="mt-auto pt-2 grid grid-cols-2 gap-2">
+                                                    {item.type === 'homework' ? (
+                                                        <>
+                                                            <button onClick={() => handleTrackerUpdate(item, '확인완료')} className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">확인완료</button>
+                                                            <button onClick={() => handleTrackerUpdate(item, '미완 후 보충완료')} className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs py-1.5 rounded-md font-bold transition-colors">보충완료</button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button onClick={() => handleTrackerUpdate(item, '재시험 완료')} className="col-span-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs py-1.5 rounded-md font-bold transition-colors">재시험 완료 처리</button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </motion.div>
     );
 }

@@ -872,20 +872,62 @@ const ReportSection = () => {
     const activeReport = sortedReports[currentReportIndex];
     let currentReportHtml = activeReport?.finalHtml || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
 
-    // Calendar helper: find incomplete assignments from all reports
+    // Calendar helper: find incomplete assignments and postponed tests from all reports
     const getIncompleteAssignments = () => {
         const incompleteMap: Record<string, { name: string; status: string; plan: string }[]> = {};
+
         studentReports.forEach(report => {
             const raw = report.rawDataJson;
-            if (raw?.assignment_tracking) {
-                const incompletes = raw.assignment_tracking.filter((a: any) =>
-                    a.status === '교재미지참' || a.status === '전체미완' || a.status === '일부미완'
-                );
-                if (incompletes.length > 0) {
-                    incompleteMap[report.publishedDate] = incompletes;
-                }
+            if (!raw) return;
+
+            const dt = report.publishedDate;
+            const incompletes: any[] = [];
+
+            // 1. Missing Homeworks
+            if (raw.homeworks && raw.hw_statuses) {
+                raw.homeworks.forEach((hw: any, idx: number) => {
+                    // Check if assigned to this student
+                    const isAssigned = !hw.assignees || hw.assignees.length === 0 || hw.assignees.includes(selectedStudentId);
+                    if (isAssigned && hw.name) {
+                        const status = raw.hw_statuses[idx]?.status;
+                        const plan = raw.hw_statuses[idx]?.plan;
+
+                        if (status === '교재미지참' || status === '전체미완' || status === '일부미완' || status === '결석') {
+                            incompletes.push({
+                                type: 'homework',
+                                name: hw.name,
+                                status,
+                                plan
+                            });
+                        }
+                    }
+                });
+            }
+
+            // 2. Postponed Word Tests
+            if (raw.tests && raw.test_scores) {
+                raw.tests.forEach((test: any, idx: number) => {
+                    const isAssigned = !test.assignees || test.assignees.length === 0 || test.assignees.includes(selectedStudentId);
+                    if (isAssigned && test.name && test.isWordTest) {
+                        const ts = raw.test_scores[idx];
+                        if (ts && ts.failAction === '추후 재시') {
+                            incompletes.push({
+                                type: 'test',
+                                name: test.name,
+                                status: ts.failAction,
+                                plan: `재시험일: ${ts.retestDate || '미정'}`
+                            });
+                        }
+                    }
+                });
+            }
+
+            if (incompletes.length > 0) {
+                if (!incompleteMap[dt]) incompleteMap[dt] = [];
+                incompleteMap[dt].push(...incompletes);
             }
         });
+
         return incompleteMap;
     };
 
@@ -1146,13 +1188,15 @@ const ReportSection = () => {
                             {selectedCalendarDate && incompleteMap[selectedCalendarDate] && (
                                 <div className="border-t border-slate-100 p-4 space-y-2 bg-red-50/50">
                                     <p className="text-xs font-bold text-red-600 flex items-center gap-1">
-                                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {selectedCalendarDate} 미완 과제
+                                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {selectedCalendarDate} 미완결 리스트
                                     </p>
                                     {incompleteMap[selectedCalendarDate].map((item: any, idx: number) => (
-                                        <div key={idx} className="bg-white rounded-lg p-2 border border-red-100">
-                                            <p className="text-xs font-semibold text-slate-900">{item.name}</p>
-                                            <p className="text-[10px] text-red-500 font-medium">{item.status}</p>
-                                            {item.plan && <p className="text-[10px] text-slate-500 mt-0.5">→ {item.plan}</p>}
+                                        <div key={idx} className="bg-white rounded-lg p-2 border border-red-100 flex flex-col gap-1">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-xs font-bold text-slate-800">{item.name}</p>
+                                                <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-bold whitespace-nowrap ml-2">{item.status}</span>
+                                            </div>
+                                            {item.plan && <p className="text-[10px] text-slate-500">→ {item.plan}</p>}
                                         </div>
                                     ))}
                                 </div>
