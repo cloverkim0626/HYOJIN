@@ -71,6 +71,21 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     const [isTrackerLoading, setIsTrackerLoading] = useState(false);
     const [postponeStateId, setPostponeStateId] = useState<string | null>(null);
     const [postponeDate, setPostponeDate] = useState<string>('');
+    const [postponePlan, setPostponePlan] = useState<string>('');
+
+    const calculateDDay = (targetDateStr: string) => {
+        if (!targetDateStr || targetDateStr === "미정" || !targetDateStr.includes("-")) return "";
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(targetDateStr);
+        target.setHours(0, 0, 0, 0);
+        const diffTime = target.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return "D-Day";
+        if (diffDays > 0) return `D-${diffDays}`;
+        return `D+${Math.abs(diffDays)}`;
+    };
 
     // Homework status modal
     const [hwModalIdx, setHwModalIdx] = useState<number | null>(null);
@@ -81,7 +96,21 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
     // Student Settings Modal
     const [showStudentSettings, setShowStudentSettings] = useState<string | null>(null); // studentId
-    const [editingStudent, setEditingStudent] = useState({ name: '', password: '', student_phone: '', parent_phone: '', notes: '' });
+    const [editingStudent, setEditingStudent] = useState({ name: '', password: '', student_phone: '', parent_phone: '', notes: '', school: '', grade: '' });
+
+    const handleSaveStudentSettings = async () => {
+        if (!showStudentSettings) return;
+        try {
+            setIsSaving(true);
+            await updateStudent(showStudentSettings, editingStudent);
+            alert('성공적으로 업데이트되었습니다.');
+            setShowStudentSettings(null);
+        } catch (err: any) {
+            alert('업데이트 실패: ' + err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     // --- Shared form data ---
     const [sharedForm, setSharedForm] = useState<SharedFormData>({
@@ -348,8 +377,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             homeworks: (raw.homeworks && raw.homeworks.length > 0) ? raw.homeworks : [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
                             newAssignments: (raw.newAssignments && raw.newAssignments.length > 0) ? raw.newAssignments : [{ name: '', assignees: [], checkDate: '', isWordOrTest: false }],
                             tests: (raw.tests && raw.tests.length > 0)
-                                ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false, assignees: t.assignees || [] }))
-                                : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: [] }],
+                                ? raw.tests.map((t: any) => ({ name: t.name || '', desc: t.desc || '', total: t.total || '', cutline: t.cutline || t.avg || '', isWordTest: t.isWordTest || false, assignees: (t.assignees && t.assignees.length > 0) ? t.assignees : (activeClass?.students.map(s => s.id) || []) }))
+                                : [{ name: '', desc: '', total: '', cutline: '', isWordTest: false, assignees: activeClass?.students.map(s => s.id) || [] }],
                             test_images: raw.test_images || [],
                             next_date_str: raw.next_date_str || '',
                             next_content: raw.next_content || ''
@@ -837,7 +866,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         setIsTrackerLoading(false);
     };
 
-    const handleTrackerUpdate = async (item: any, actionType: 'COMPLETE' | 'POSTPONE', payload: string) => {
+    const handleTrackerUpdate = async (item: any, actionType: 'COMPLETE' | 'POSTPONE', payload: any) => {
         try {
             const { data: reportData, error } = await supabase.from('student_reports').select('*').eq('id', item.reportId).single();
             if (error || !reportData) throw new Error('Cannot find report');
@@ -851,7 +880,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         rawJson.hw_statuses[item.rawIndex].plan = '보충완료';
                     } else if (actionType === 'POSTPONE') {
                         rawJson.hw_statuses[item.rawIndex].postponeCount = (rawJson.hw_statuses[item.rawIndex].postponeCount || 0) + 1;
-                        rawJson.hw_statuses[item.rawIndex].recheckDate = payload;
+                        rawJson.hw_statuses[item.rawIndex].recheckDate = payload.date;
+                        if (payload.plan) {
+                            rawJson.hw_statuses[item.rawIndex].plan = payload.plan;
+                        }
                     }
                 }
             } else if (item.type === 'test') {
@@ -860,7 +892,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         rawJson.test_scores[item.rawIndex].failAction = '재시험 완료';
                     } else if (actionType === 'POSTPONE') {
                         rawJson.test_scores[item.rawIndex].postponeCount = (rawJson.test_scores[item.rawIndex].postponeCount || 0) + 1;
-                        rawJson.test_scores[item.rawIndex].retestDate = payload;
+                        rawJson.test_scores[item.rawIndex].retestDate = payload.date;
                         if (rawJson.test_scores[item.rawIndex].score === '미응시(결석)' || rawJson.test_scores[item.rawIndex].score === '연기') { } else {
                             rawJson.test_scores[item.rawIndex].failAction = '추후 재시';
                         }
@@ -871,7 +903,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     rawJson.makeupStatus = '보강완료';
                 } else if (actionType === 'POSTPONE') {
                     rawJson.postponeCount = (rawJson.postponeCount || 0) + 1;
-                    rawJson.makeupDate = payload;
+                    rawJson.makeupDate = payload.date;
                 }
             }
 
@@ -958,7 +990,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                 <button onClick={() => { if (selectedClassId && newStudentName.trim()) { addStudent(selectedClassId, newStudentName.trim()); setNewStudentName(''); } }} className="bg-rose-600 p-2 rounded-lg hover:bg-rose-500 transition-colors"><Plus size={16} /></button>
                             </div>
                             <div className="space-y-1 max-h-32 overflow-y-auto">
-                                {activeClass.students.map(s => (
+                                {[...activeClass.students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map(s => (
                                     <div key={s.id} className="flex items-center justify-between text-xs px-2 py-1.5 rounded-md hover:bg-white/5 group">
                                         <span className="truncate pr-1">{s.name}</span>
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 shrink-0">
@@ -968,7 +1000,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     password: s.password || '',
                                                     student_phone: s.student_phone || '',
                                                     parent_phone: s.parent_phone || '',
-                                                    notes: s.notes || ''
+                                                    notes: s.notes || '',
+                                                    school: s.school || '',
+                                                    grade: s.grade || ''
                                                 });
                                                 setShowStudentSettings(s.id);
                                             }} className="text-slate-400 hover:text-white transition-colors"><Settings size={12} /></button>
@@ -1024,7 +1058,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     </h4>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {activeClass.students.map(student => {
+                                        {[...activeClass.students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map(student => {
                                             const sf = studentForms[student.id] || defaultStudentForm(sharedForm.homeworks.length, sharedForm.tests.length);
                                             return (
                                                 <div key={student.id} className="bg-slate-900/30 border border-white/10 rounded-xl p-3 space-y-2">
@@ -1037,7 +1071,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                     password: student.password || '',
                                                                     student_phone: student.student_phone || '',
                                                                     parent_phone: student.parent_phone || '',
-                                                                    notes: student.notes || ''
+                                                                    notes: student.notes || '',
+                                                                    school: student.school || '',
+                                                                    grade: student.grade || ''
                                                                 });
                                                                 setShowStudentSettings(student.id);
                                                             }} className="text-slate-500 hover:text-white transition-all"><Settings size={12} /></button>
@@ -1141,10 +1177,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                         <input value={hw.name} onChange={e => handleHwSharedChange(idx, 'name', e.target.value)} placeholder={`결과 체크용 과제 ${idx + 1}`}
                                                             className="flex-1 bg-black border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
                                                         {hw.name && (
-                                                            <div className="flex items-center gap-1">
+                                                            <div className="flex items-center gap-2">
                                                                 <button onClick={() => setHwModalIdx(idx)}
                                                                     className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
                                                                     <ClipboardCheck size={14} /> 상태체크
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setHwAssignIdx(idx)}
+                                                                    className="py-2 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold transition-all whitespace-nowrap"
+                                                                >
+                                                                    {hw.assignees.length === activeClass.students.length ? '전체' : `${hw.assignees.length}명`}
                                                                 </button>
                                                             </div>
                                                         )}
@@ -1208,68 +1250,68 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                 {/* Right: Inline Student Scores */}
                                                                 <div className="lg:w-2/3 lg:border-l lg:border-white/5 lg:pl-6">
                                                                     <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">학생 점수 입력</h5>
-                                                                    {!test.name ? (
-                                                                        <div className="text-xs text-slate-600 italic">시험명을 입력하면 활성화됩니다.</div>
-                                                                    ) : (
-                                                                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2">
-                                                                            {activeClass?.students.filter(student => test.assignees.includes(student.id) || test.assignees.length === 0).map(student => {
-                                                                                const sf = studentForms[student.id];
-                                                                                const ts = sf?.test_scores[idx] || { score: '' };
-                                                                                const scoreNum = parseFloat(ts.score) || 0;
-                                                                                const cutlineNum = parseFloat(test.cutline) || 0;
-                                                                                const isFail = test.isWordTest && test.cutline && ts.score !== '' && isFinite(scoreNum) && scoreNum < cutlineNum;
-                                                                                return (
-                                                                                    <div key={student.id} className="flex items-center flex-wrap gap-2 bg-slate-900/50 p-2 rounded-lg border border-white/5">
-                                                                                        <span className="text-xs font-bold text-slate-300 w-16 truncate">{student.name}</span>
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <input type="text" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                                const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                                return { ...prev, test_scores: newScores };
-                                                                                            })} placeholder="점수" className={`w-16 bg-black border rounded px-2 py-1 text-sm font-bold focus:outline-none text-center ${isFail ? 'border-rose-500/50 text-rose-400' : 'border-white/10 text-emerald-400'} focus:border-rose-500`} />
+                                                                    <div className="mt-4 p-4 bg-black/40 rounded-xl border border-white/5 space-y-3">
+                                                                        {[...activeClass.students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map(student => {
+                                                                            const ts = studentForms[student.id]?.test_scores[idx];
+                                                                            if (!ts) return null;
 
-                                                                                            <select value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                                const newScores = [...prev.test_scores];
-                                                                                                newScores[idx] = { ...newScores[idx], score: e.target.value };
-                                                                                                return { ...prev, test_scores: newScores };
-                                                                                            })} className="bg-black border border-white/10 rounded px-2 py-1.5 text-[10px] text-slate-400 focus:outline-none">
-                                                                                                <option value="">(직접입력)</option>
-                                                                                                <option value="해당없음">해당없음</option>
-                                                                                                <option value="미응시(결석)">미응시(결석)</option>
-                                                                                                <option value="연기">연기</option>
-                                                                                            </select>
-                                                                                        </div>
+                                                                            // Only show student if they are in the examinees list
+                                                                            if (test.assignees.length > 0 && !test.assignees.includes(student.id)) return null;
 
-                                                                                        <div className="flex items-center gap-2 ml-auto">
-                                                                                            {isFail && <span className="text-[10px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded font-bold">FAIL</span>}
-                                                                                            {test.isWordTest && ts.score !== '' && !isFail && !isNaN(scoreNum) && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">PASS</span>}
-                                                                                            {/* Fail actions for word test */}
-                                                                                            {isFail && (
-                                                                                                <div className="flex items-center gap-1">
-                                                                                                    {(['재시험 완료', '추후 재시'] as const).map(action => (
-                                                                                                        <button key={action} onClick={() => updateStudentForm(student.id, prev => {
-                                                                                                            const newScores = [...prev.test_scores];
-                                                                                                            newScores[idx] = { ...newScores[idx], failAction: action };
-                                                                                                            return { ...prev, test_scores: newScores };
-                                                                                                        })} className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-black border-white/10 text-slate-500 hover:bg-white/5'}`}>
-                                                                                                            {action}
-                                                                                                        </button>
-                                                                                                    ))}
-                                                                                                    {ts.failAction === '추후 재시' && (
-                                                                                                        <input type="date" value={ts.retestDate || ''} onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => {
-                                                                                                            const newScores = [...prev.test_scores];
-                                                                                                            newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
-                                                                                                            return { ...prev, test_scores: newScores };
-                                                                                                        })} className="w-28 bg-black border border-white/10 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200 cursor-pointer" />
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
+                                                                            const scoreNum = parseFloat(ts.score);
+                                                                            const isFail = test.isWordTest && ts.score !== '' && isFinite(scoreNum) && (scoreNum < (parseFloat(test.cutline) || 0));
+
+                                                                            return (
+                                                                                <div key={student.id} className="flex items-center flex-wrap gap-2 bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                                                                                    <span className="text-xs font-bold text-slate-300 w-16 truncate">{student.name}</span>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <input type="text" value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                            const newScores = [...prev.test_scores];
+                                                                                            newScores[idx] = { ...newScores[idx], score: e.target.value };
+                                                                                            return { ...prev, test_scores: newScores };
+                                                                                        })} placeholder="점수" className={`w-16 bg-black border rounded px-2 py-1 text-sm font-bold focus:outline-none text-center ${isFail ? 'border-rose-500/50 text-rose-400' : 'border-white/10 text-emerald-400'} focus:border-rose-500`} />
+
+                                                                                        <select value={ts.score} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                            const newScores = [...prev.test_scores];
+                                                                                            newScores[idx] = { ...newScores[idx], score: e.target.value };
+                                                                                            return { ...prev, test_scores: newScores };
+                                                                                        })} className="bg-black border border-white/10 rounded px-2 py-1.5 text-[10px] text-slate-400 focus:outline-none">
+                                                                                            <option value="">(직접입력)</option>
+                                                                                            <option value="해당없음">해당없음</option>
+                                                                                            <option value="미응시(결석)">미응시(결석)</option>
+                                                                                            <option value="연기">연기</option>
+                                                                                        </select>
                                                                                     </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
+
+                                                                                    <div className="flex items-center gap-2 ml-auto">
+                                                                                        {isFail && <span className="text-[10px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded font-bold">FAIL</span>}
+                                                                                        {test.isWordTest && ts.score !== '' && !isFail && !isNaN(scoreNum) && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">PASS</span>}
+                                                                                        {/* Fail actions for word test */}
+                                                                                        {isFail && (
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                {(['재시험 완료', '추후 재시'] as const).map(action => (
+                                                                                                    <button key={action} onClick={() => updateStudentForm(student.id, prev => {
+                                                                                                        const newScores = [...prev.test_scores];
+                                                                                                        newScores[idx] = { ...newScores[idx], failAction: action };
+                                                                                                        return { ...prev, test_scores: newScores };
+                                                                                                    })} className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${ts.failAction === action ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-black border-white/10 text-slate-500 hover:bg-white/5'}`}>
+                                                                                                        {action}
+                                                                                                    </button>
+                                                                                                ))}
+                                                                                                {ts.failAction === '추후 재시' && (
+                                                                                                    <input type="date" value={ts.retestDate || ''} onClick={e => (e.target as any).showPicker?.()} onChange={e => updateStudentForm(student.id, prev => {
+                                                                                                        const newScores = [...prev.test_scores];
+                                                                                                        newScores[idx] = { ...newScores[idx], retestDate: e.target.value };
+                                                                                                        return { ...prev, test_scores: newScores };
+                                                                                                    })} className="w-28 bg-black border border-white/10 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-amber-500 text-amber-200 cursor-pointer" />
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1337,14 +1379,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     <div key={idx} className="flex gap-2 items-center">
                                                         <input value={hw.name} onChange={e => handleNewAssignChange(idx, 'name', e.target.value)} placeholder={`다음 과제 ${idx + 1}`}
                                                             className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-indigo-100" />
-                                                        {hw.name && (
-                                                            <div className="flex items-center gap-1">
-                                                                <button onClick={() => setHwAssignIdx(idx)}
-                                                                    className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg text-xs font-bold border border-indigo-500/20 transition-colors whitespace-nowrap">
-                                                                    <Users size={14} /> 개별/전체 할당
-                                                                </button>
-                                                            </div>
-                                                        )}
+
+                                                        <div className="flex items-center gap-1">
+                                                            <button onClick={() => setHwAssignIdx(idx)}
+                                                                className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 px-3 py-2 rounded-lg text-xs font-bold border border-indigo-500/20 transition-colors whitespace-nowrap">
+                                                                <Users size={14} /> 개별/전체 할당
+                                                            </button>
+                                                        </div>
+
                                                         {sharedForm.newAssignments.length > 1 && (
                                                             <button onClick={() => removeNewAssignment(idx)} className="text-slate-600 hover:text-rose-400 p-1"><X size={16} /></button>
                                                         )}
@@ -1565,7 +1607,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                 <span className="text-sm font-medium text-white">{report.publishedDate}</span>
                                                 <span className="ml-2 text-[10px] text-slate-500 uppercase">{report.reportType}</span>
                                             </div>
-                                            <button onClick={() => handleDeleteReport(report.id)}
+                                            <button onClick={() => {
+                                                if (window.confirm('리포트 기록을 정말 삭제하시겠습니까?')) {
+                                                    handleDeleteReport(report.id);
+                                                }
+                                            }}
                                                 className="text-slate-600 hover:text-rose-400 transition-colors flex items-center gap-1 text-xs">
                                                 <Trash2 size={14} /> 삭제
                                             </button>
@@ -1638,7 +1684,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded ml-auto flex flex-col mb-1 border border-slate-700">발행: {item.date}</span>
-                                                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-1.5 py-0.5 rounded ml-auto flex flex-col border border-indigo-500/30">목표: {item.targetDate}</span>
+                                                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-bold px-1.5 py-0.5 rounded ml-auto flex flex-col border border-indigo-500/30">목표: {item.targetDate} <span className="text-[11px] text-indigo-200">{calculateDDay(item.targetDate)}</span></span>
                                                     </div>
                                                 </div>
 
@@ -1671,12 +1717,17 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     </button>
 
                                                     {postponeStateId === item.id ? (
-                                                        <div className="flex gap-1 items-center bg-black rounded p-1 border border-amber-500/30">
-                                                            <input type="date" value={postponeDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => setPostponeDate(e.target.value)} className="flex-1 bg-transparent border-none text-[10px] text-amber-200 outline-none w-full cursor-pointer" />
-                                                            <button type="button" onClick={async () => {
-                                                                if (postponeDate) await handleTrackerUpdate(item, 'POSTPONE', postponeDate);
-                                                            }} className="bg-amber-500 text-black px-2 py-0.5 rounded font-bold text-[10px] shrink-0 hover:bg-amber-400 cursor-pointer">확인</button>
-                                                            <button type="button" onClick={() => setPostponeStateId(null)} className="text-slate-500 hover:text-white px-1 shrink-0 cursor-pointer"><X size={12} /></button>
+                                                        <div className="flex flex-col gap-1 col-span-2 bg-black rounded p-1 border border-amber-500/30">
+                                                            <div className="flex gap-1 items-center">
+                                                                <input type="date" value={postponeDate} onClick={e => (e.target as any).showPicker?.()} onChange={e => setPostponeDate(e.target.value)} className="flex-1 bg-slate-900 border border-amber-500/20 rounded text-[10px] text-amber-200 outline-none w-full cursor-pointer px-1 py-0.5" />
+                                                                <button type="button" onClick={async () => {
+                                                                    if (postponeDate) await handleTrackerUpdate(item, 'POSTPONE', { date: postponeDate, plan: postponePlan });
+                                                                }} className="bg-amber-500 text-black px-2 py-0.5 rounded font-bold text-[10px] shrink-0 hover:bg-amber-400 cursor-pointer">확인</button>
+                                                                <button type="button" onClick={() => { setPostponeStateId(null); setPostponePlan(''); }} className="text-slate-500 hover:text-white px-1 shrink-0 cursor-pointer"><X size={12} /></button>
+                                                            </div>
+                                                            {item.type === 'homework' && (
+                                                                <input type="text" value={postponePlan} onChange={e => setPostponePlan(e.target.value)} placeholder="2차 보완계획 수기 입력" className="w-full bg-slate-900 border border-amber-500/20 rounded text-[10px] text-white outline-none px-2 py-1 mt-0.5 focus:border-amber-400" />
+                                                            )}
                                                         </div>
                                                     ) : (
                                                         <button type="button"
@@ -1685,6 +1736,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                 e.stopPropagation();
                                                                 if (window.confirm('해당 미완과제를 재연기하시겠습니까?')) {
                                                                     setPostponeStateId(item.id);
+                                                                    setPostponePlan('');
                                                                     const targetStr = item.targetDate || new Date().toISOString();
                                                                     const d = new Date(targetStr);
                                                                     if (isNaN(d.getTime())) {
@@ -1733,13 +1785,19 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                     <input value={editingStudent.name} onChange={e => setEditingStudent(prev => ({ ...prev, name: e.target.value }))}
                                         className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
                                 </div>
-                                {activeClass?.students.find(s => s.id === showStudentSettings)?.password !== null && (
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs text-slate-400 mb-1">비밀번호 (현재: {activeClass?.students.find(s => s.id === showStudentSettings)?.password || '미설정'})</label>
-                                        <input value={editingStudent.password} onChange={e => setEditingStudent(prev => ({ ...prev, password: e.target.value }))}
-                                            placeholder="변경할 비밀번호" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-1">학교</label>
+                                        <input value={editingStudent.school || ''} onChange={e => setEditingStudent(prev => ({ ...prev, school: e.target.value }))}
+                                            placeholder="학교 입력" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
                                     </div>
-                                )}
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-1">학년</label>
+                                        <input value={editingStudent.grade || ''} onChange={e => setEditingStudent(prev => ({ ...prev, grade: e.target.value }))}
+                                            placeholder="학년 입력" className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500" />
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs text-slate-400 mb-1">학생 번호</label>
@@ -1759,20 +1817,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-slate-950 flex gap-2">
-                                <button onClick={() => setShowStudentSettings(null)} className="flex-1 py-2 rounded-xl border border-white/10 text-slate-400 hover:text-white transition-colors text-sm">취소</button>
-                                <button onClick={async () => {
-                                    try {
-                                        setIsSaving(true);
-                                        await updateStudent(showStudentSettings, editingStudent);
-                                        alert('성공적으로 업데이트되었습니다.');
+                            <div className="p-3 border-t border-white/10 flex gap-2">
+                                <button onClick={() => {
+                                    if (window.confirm('학생을 목록에서 정말 삭제하시겠습니까?')) {
+                                        deleteStudent(selectedClassId!, showStudentSettings!);
                                         setShowStudentSettings(null);
-                                    } catch (err: any) {
-                                        alert('업데이트 실패: ' + err.message);
-                                    } finally {
-                                        setIsSaving(false);
                                     }
-                                }} disabled={isSaving} className="flex-initial px-8 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 rounded-xl text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                                }} className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl text-xs font-bold transition-colors">학생 삭제</button>
+                                <button onClick={handleSaveStudentSettings} disabled={isSaving} className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 rounded-xl text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
                                     {isSaving ? <><div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> 저장 중</> : '저장하기'}
                                 </button>
                             </div>

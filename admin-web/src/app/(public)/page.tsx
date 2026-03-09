@@ -18,7 +18,11 @@ import {
     X,
     Phone,
     MessageCircle,
-    Youtube
+    Youtube,
+    CheckCircle2,
+    BookOpen,
+    PenTool,
+    AlertCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import AdminPanel from './AdminPanel';
@@ -855,10 +859,25 @@ const ReportSection = () => {
     const activeReport = sortedReports[currentReportIndex];
     let currentReportHtml = activeReport?.finalHtml || `<div class="text-center text-slate-500 py-10">아직 등록된 리포트가 없습니다.</div>`;
 
+    const calculateDDay = (targetDateStr: string) => {
+        if (!targetDateStr || targetDateStr === "미정" || !targetDateStr.includes("-")) return "";
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(targetDateStr);
+        target.setHours(0, 0, 0, 0);
+        const diffTime = target.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return "D-Day";
+        if (diffDays > 0) return `D-${diffDays}`;
+        return `D+${Math.abs(diffDays)}`;
+    };
+
     // Tracker helper: find incomplete assignments and postponed tests from all reports
     const getIncompleteAssignmentsList = () => {
-        const list: { type: string; name: string; status: string; plan: string; targetDate: string; postponeCount: number; score?: string }[] = [];
+        const list: { type: string; name: string; status: string; plan: string; targetDate: string; issueDate: string; postponeCount: number; score?: string }[] = [];
 
+        // We use all student reports to find unresolved items
         studentReports.forEach(report => {
             const raw = report.rawDataJson;
             if (!raw) return;
@@ -866,6 +885,7 @@ const ReportSection = () => {
             // 1. Missing Homeworks
             if (raw.homeworks && raw.hw_statuses) {
                 raw.homeworks.forEach((hw: any, idx: number) => {
+                    // Check if this specific student is assigned to this homework
                     const isAssigned = !hw.assignees || hw.assignees.length === 0 || hw.assignees.includes(selectedStudentId);
                     if (isAssigned && hw.name) {
                         const sObj = raw.hw_statuses[idx];
@@ -873,8 +893,18 @@ const ReportSection = () => {
                             const status = sObj.status;
                             const plan = sObj.plan;
                             const targetDate = sObj.recheckDate || report.publishedDate;
+
+                            // Capture all non-completed statuses (captured: 교재미지참, 전체미완, 일부미완, 결석)
                             if (status !== '확인완료' && status !== '미완 후 보충완료') {
-                                list.push({ type: 'homework', name: hw.name, status, plan, targetDate, postponeCount: sObj.postponeCount || 0 });
+                                list.push({
+                                    type: 'homework',
+                                    name: hw.name,
+                                    status,
+                                    plan,
+                                    targetDate,
+                                    issueDate: report.publishedDate, // Track when this was issued
+                                    postponeCount: sObj.postponeCount || 0
+                                });
                             }
                         }
                     }
@@ -900,6 +930,7 @@ const ReportSection = () => {
                                     status: displayStatus,
                                     plan: `재시험일: ${ts.retestDate || '미정'}`,
                                     targetDate,
+                                    issueDate: report.publishedDate,
                                     postponeCount: ts.postponeCount || 0,
                                     score: ts.score
                                 });
@@ -918,12 +949,15 @@ const ReportSection = () => {
                     status: '미완료',
                     plan: `보강유형: ${raw.makeupType || '미정'}`,
                     targetDate,
+                    issueDate: report.publishedDate,
                     postponeCount: raw.postponeCount || 0
                 });
             }
         });
 
-        return list;
+        // Deduplicate items that might appear multiple times if the logic overlaps (though it shouldn't)
+        // and sort by target date
+        return list.sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
     };
 
     const handleNextReport = () => {
@@ -1015,7 +1049,7 @@ const ReportSection = () => {
                                 <input type="text" placeholder="이름 검색" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400" />
                             </div>
                             <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
-                                {activeClass.students.map((s) => (
+                                {[...activeClass.students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((s) => (
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelectedStudentId(s.id); setStep('password'); }}
@@ -1064,11 +1098,11 @@ const ReportSection = () => {
 
                             {/* Personal Premium Greeting */}
                             <div className="pt-8 pb-4 text-center relative">
-                                {/* Missing Assignment Tracker Button with Glow */}
+                                {/* Missing Assignment Tracker Button with Glow (Glass Circle) */}
                                 <button onClick={() => setShowStudentTracker(true)}
-                                    className="absolute top-4 right-0 flex items-center gap-1.5 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-full transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_20px_rgba(37,99,235,0.6)] animate-glow-pulse border border-blue-400/30">
-                                    <ClipboardList size={14} />
-                                    미완과제 추적
+                                    className="absolute top-4 right-0 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-white bg-white/10 backdrop-blur-md w-16 h-16 rounded-full transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] hover:bg-white/20 border border-white/20 hover:scale-105 active:scale-95 z-50 overflow-hidden leading-tight text-center">
+                                    <Search size={16} className="text-white/90" />
+                                    <span>미완과제<br />추적</span>
                                 </button>
                                 <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
@@ -1080,58 +1114,59 @@ const ReportSection = () => {
                                 <div className="mt-8" />
                             </div>
 
-                            {/* Refined Navigation & Type Selection */}
-                            <div className="space-y-3 px-1">
-                                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
-                                    {(['daily', 'weekly', 'monthly'] as const).map(type => (
-                                        <button
-                                            key={type}
-                                            onClick={() => {
-                                                setReportType(type);
-                                                setCurrentReportIndex(0);
-                                            }}
-                                            className={`py-4 text-[11px] font-black tracking-tight uppercase transition-all rounded-lg ${reportType === type
-                                                ? 'bg-white text-slate-900 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-600'
-                                                }`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-2 py-3 shadow-sm">
-                                    <button
-                                        onClick={handlePrevReport}
-                                        disabled={currentReportIndex >= sortedReports.length - 1}
-                                        className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
-                                    >
-                                        <ChevronRight size={22} className="rotate-180" />
-                                    </button>
-
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-xs font-black text-slate-900 mb-0.5">
-                                            {activeReport ? activeReport.publishedDate : 'NO DATA'}
-                                        </span>
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                            Vol.{sortedReports.length - currentReportIndex} / {sortedReports.length}
-                                        </span>
+                            {/* Refined Navigation & Type Selection + Report Container Wrapper */}
+                            <div className="max-w-2xl mx-auto w-full space-y-8">
+                                <div className="space-y-3 px-1">
+                                    <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                                        {(['daily', 'weekly', 'monthly'] as const).map(type => (
+                                            <button
+                                                key={type}
+                                                onClick={() => {
+                                                    setReportType(type);
+                                                    setCurrentReportIndex(0);
+                                                }}
+                                                className={`py-4 text-[11px] font-black tracking-tight uppercase transition-all rounded-lg ${reportType === type
+                                                    ? 'bg-white text-slate-900 shadow-sm'
+                                                    : 'text-slate-400 hover:text-slate-600'
+                                                    }`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
                                     </div>
 
-                                    <button
-                                        onClick={handleNextReport}
-                                        disabled={currentReportIndex === 0}
-                                        className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
-                                    >
-                                        <ChevronRight size={22} />
-                                    </button>
-                                </div>
-                            </div>
+                                    <div className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-2 py-3 shadow-sm">
+                                        <button
+                                            onClick={handlePrevReport}
+                                            disabled={currentReportIndex >= sortedReports.length - 1}
+                                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
+                                        >
+                                            <ChevronRight size={22} className="rotate-180" />
+                                        </button>
 
-                            {/* Main Report Container */}
-                            <div className="mt-8" />
-                            <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden [&_.hd-tag]:text-transparent [&_.hd-tag]:select-none">
-                                <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-xs font-black text-slate-900 mb-0.5">
+                                                {activeReport ? activeReport.publishedDate : 'NO DATA'}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                                Vol.{sortedReports.length - currentReportIndex} / {sortedReports.length}
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            onClick={handleNextReport}
+                                            disabled={currentReportIndex === 0}
+                                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-slate-900 disabled:opacity-20 transition-colors"
+                                        >
+                                            <ChevronRight size={22} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Main Report Container */}
+                                <div className="bg-white rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden [&_.hd-tag]:text-transparent [&_.hd-tag]:select-none">
+                                    <div className="w-full" dangerouslySetInnerHTML={{ __html: currentReportHtml }} />
+                                </div>
                             </div>
 
                             {/* Minimal Footer */}
@@ -1145,94 +1180,154 @@ const ReportSection = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Student Assignment Tracker Modal */}
+                {/* Premium Student Assignment Tracker Modal - Refined v2 */}
                 <AnimatePresence>
-                    {showStudentTracker && (
-                        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowStudentTracker(false)}>
+                    {showStudentTracker && activeStudent && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[150] flex items-center justify-center p-4 backdrop-blur-2xl bg-slate-950/40"
+                            onClick={() => setShowStudentTracker(false)}
+                        >
+                            {/* Animated Gradient Background - Subtle */}
+                            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+                                <div className="absolute top-[0%] left-[-10%] w-[50%] h-[50%] bg-blue-500 rounded-full blur-[150px] animate-pulse"></div>
+                                <div className="absolute bottom-[0%] right-[-10%] w-[50%] h-[50%] bg-rose-500 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '3s' }}></div>
+                            </div>
+
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                initial={{ scale: 0.98, y: 10, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                exit={{ scale: 0.98, y: 10, opacity: 0 }}
+                                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                                 onClick={e => e.stopPropagation()}
-                                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] relative"
+                                className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[40px] w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] relative"
                             >
-                                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0 relative z-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-                                            <ClipboardList size={20} />
+                                {/* Header */}
+                                <div className="p-10 pb-6 border-b border-white/5 flex items-start justify-between relative z-10">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shadow-inner">
+                                            <ClipboardList className="text-rose-400" size={28} />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-slate-900 text-lg">미완과제 추적기</h3>
-                                            <p className="text-xs text-slate-400 font-medium">{activeStudent?.name} 학생의 미완료 항목</p>
+                                            <h3 className="font-bold text-white text-2xl tracking-tight">미완과제 추적기</h3>
+                                            <p className="text-sm text-slate-400 mt-1 uppercase tracking-widest font-semibold flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
+                                                Personal Progress
+                                            </p>
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowStudentTracker(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer relative z-50">
+                                    <button
+                                        onClick={() => setShowStudentTracker(false)}
+                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-all cursor-pointer border border-white/10"
+                                    >
                                         <X size={20} />
                                     </button>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto p-6 space-y-4 relative z-10 bg-slate-50/30">
+                                {/* Content */}
+                                <div className="flex-1 overflow-y-auto px-10 py-6 space-y-8 scrollbar-hide relative z-10">
                                     {getIncompleteAssignmentsList().length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                                            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-4 opacity-50">
-                                                <ShieldCheck size={32} />
+                                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                                            <div className="w-20 h-20 bg-emerald-500/5 rounded-full flex items-center justify-center mb-6 border border-emerald-500/10">
+                                                <CheckCircle2 size={40} className="text-emerald-500/40" />
                                             </div>
-                                            <p className="text-sm font-bold text-slate-500">모든 과제와 시험을 완료했습니다!</p>
-                                            <p className="text-[11px] mt-1">대단해요! 지금처럼 계속 화이팅해봐요.</p>
+                                            <h4 className="text-lg font-bold text-white mb-2">Perfect Compliance</h4>
+                                            <p className="text-slate-500 text-xs tracking-wide">누락되거나 해결되지 않은 과제가 없습니다.</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
-                                            {getIncompleteAssignmentsList().sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()).map((item, idx) => (
-                                                <div key={idx} className="group relative bg-white rounded-2xl p-5 border border-slate-100 transition-all hover:shadow-md hover:border-blue-100">
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${item.type === 'homework' ? 'bg-amber-100 text-amber-700' :
-                                                            item.type === 'test' ? 'bg-rose-100 text-rose-700' :
-                                                                'bg-indigo-100 text-indigo-700'
-                                                            }`}>
-                                                            {item.type === 'homework' ? 'Homework' : item.type === 'test' ? 'Test' : 'Absence'}
-                                                        </span>
-                                                        <div className="text-right">
-                                                            <div className="flex items-center gap-1.5 text-rose-500 font-bold text-[11px] bg-rose-50 px-2 py-0.5 rounded-lg mb-1">
-                                                                <Calendar size={12} />
-                                                                목표: {item.targetDate}
-                                                            </div>
-                                                            {item.postponeCount > 0 && (
-                                                                <span className="text-[9px] font-black text-rose-400 opacity-60">[{item.postponeCount + 1}차 연기됨]</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                        <motion.div
+                                            initial="hidden"
+                                            animate="visible"
+                                            variants={{
+                                                visible: { transition: { staggerChildren: 0.1 } }
+                                            }}
+                                            className="space-y-6"
+                                        >
+                                            {getIncompleteAssignmentsList().map((item, idx) => {
+                                                const issueDateObj = new Date(item.issueDate);
+                                                const issueDateStr = `${issueDateObj.getMonth() + 1}/${issueDateObj.getDate()}`;
 
-                                                    <h4 className="font-bold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors leading-relaxed">
-                                                        {item.name}
-                                                    </h4>
-
-                                                    <div className="flex gap-2">
-                                                        <div className="bg-slate-50 rounded-xl p-2.5 text-[11px] text-slate-500 border border-slate-100 flex-1">
-                                                            <span className="font-bold text-slate-900 mr-2">상태:</span>
-                                                            {item.status}
-                                                            {item.plan && <p className="mt-1 text-slate-400 font-medium italic">→ {item.plan}</p>}
-                                                            {item.score && (
-                                                                <div className="mt-1 flex items-center gap-1">
-                                                                    <span className="text-rose-500 font-bold">점수: {item.score}</span>
+                                                return (
+                                                    <motion.div
+                                                        key={idx}
+                                                        variants={{
+                                                            hidden: { y: 15, opacity: 0 },
+                                                            visible: { y: 0, opacity: 1 }
+                                                        }}
+                                                        className="group bg-white/5 border border-white/5 rounded-3xl p-8 transition-all hover:bg-white/[0.08] hover:border-white/10"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-6">
+                                                            <div className="flex gap-6">
+                                                                <div className={`mt-1 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 ${item.type === 'homework' ? 'bg-rose-500/20 text-rose-400' :
+                                                                    item.type === 'test' ? 'bg-pink-500/20 text-pink-400' :
+                                                                        'bg-indigo-500/10 text-indigo-500'
+                                                                    }`}>
+                                                                    {item.type === 'homework' ? <ClipboardList size={20} /> :
+                                                                        item.type === 'test' ? <PenTool size={20} /> :
+                                                                            <AlertCircle size={20} />}
                                                                 </div>
-                                                            )}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-300">
+                                                                            {item.type === 'homework' ? 'Homework' :
+                                                                                item.type === 'test' ? 'Test Retry' :
+                                                                                    'Attendance'}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                                                                            {issueDateStr} 발생!
+                                                                        </span>
+                                                                        {item.postponeCount > 0 && (
+                                                                            <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-bold">
+                                                                                {item.postponeCount + 1}회 연기됨
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <h4 className="text-xl font-bold text-white group-hover:text-rose-400 transition-colors leading-snug">
+                                                                        {item.name}
+                                                                    </h4>
+
+                                                                    <div className="flex items-center gap-4 mt-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-1 h-1 rounded-full bg-rose-500"></div>
+                                                                            <span className="text-xs text-slate-400 font-medium tracking-tight">마감/점검일: <span className="text-white font-bold">{item.targetDate}</span> <span className="text-rose-400 font-bold ml-1">{calculateDDay(item.targetDate)}</span></span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-1 h-1 rounded-full bg-amber-500"></div>
+                                                                            <span className="text-xs text-slate-400 font-medium tracking-tight">상태: <span className="text-amber-500 font-bold">{item.status}</span></span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+
+                                                        {item.plan && (
+                                                            <div className="mt-6 p-5 bg-white/[0.03] rounded-2xl border border-white/5">
+                                                                <p className="text-xs font-medium text-slate-200 leading-relaxed">
+                                                                    <span className="text-[10px] uppercase font-bold text-slate-300 mr-2 tracking-widest bg-white/10 px-2 py-1 rounded">보완 계획</span>
+                                                                    {item.plan}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </motion.div>
                                     )}
                                 </div>
 
-                                <div className="p-4 bg-white border-t border-slate-100 flex flex-col items-center shrink-0 relative z-10">
-                                    <p className="text-[10px] text-slate-400 font-medium mb-3">해당 과제를 완료하면 다음 리포트 발행 시 목록에서 사라집니다.</p>
-                                    <button onClick={() => setShowStudentTracker(false)}
-                                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-black transition-all shadow-lg shadow-slate-200 cursor-pointer">
-                                        확인했습니다
+                                {/* Footer */}
+                                <div className="p-10 pt-4 relative z-10 shrink-0">
+                                    <button
+                                        onClick={() => setShowStudentTracker(false)}
+                                        className="w-full py-5 bg-white text-slate-950 hover:bg-slate-200 rounded-3xl text-sm font-black transition-all shadow-xl hover:scale-[1.01] active:scale-[0.98] cursor-pointer tracking-widest uppercase"
+                                    >
+                                        닫기 / Close
                                     </button>
                                 </div>
                             </motion.div>
-                        </div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
 

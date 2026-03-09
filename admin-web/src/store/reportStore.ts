@@ -26,6 +26,8 @@ export interface Student {
     password?: string | null;
     student_phone?: string | null;
     parent_phone?: string | null;
+    school?: string | null;
+    grade?: string | null;
     notes?: string | null;
     reports?: StudentReport[]; // Loaded on demand
 }
@@ -104,6 +106,8 @@ export const useReportStore = create<ReportStore>((set, get) => ({
                         password: stu.password,
                         student_phone: stu.student_phone,
                         parent_phone: stu.parent_phone,
+                        school: stu.school,
+                        grade: stu.grade,
                         notes: stu.notes,
                         reports: []
                     }))
