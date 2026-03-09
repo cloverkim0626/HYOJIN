@@ -286,12 +286,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         }
     }, [sharedForm.newAssignments, activeClass]);
 
-    // --- Auto-calculate average for a test (excluding blank scores) ---
+    // --- Auto-calculate average for a test (excluding blank scores and non-numeric values like '미응시') ---
     const calcAvg = (testIdx: number): number => {
         if (!activeClass) return 0;
         const scores = activeClass.students
             .map(s => studentForms[s.id]?.test_scores[testIdx]?.score)
-            .filter(s => s !== undefined && s !== '')
+            .filter(s => s !== undefined && s !== '' && !isNaN(parseFloat(s!)))
             .map(s => parseFloat(s!));
         if (scores.length === 0) return 0;
         return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10;
@@ -1176,20 +1176,18 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                     <div key={idx} className="flex gap-2 items-center">
                                                         <input value={hw.name} onChange={e => handleHwSharedChange(idx, 'name', e.target.value)} placeholder={`결과 체크용 과제 ${idx + 1}`}
                                                             className="flex-1 bg-black border border-white/5 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" />
-                                                        {hw.name && (
-                                                            <div className="flex items-center gap-2">
-                                                                <button onClick={() => setHwModalIdx(idx)}
-                                                                    className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
-                                                                    <ClipboardCheck size={14} /> 상태체크
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setHwAssignIdx(idx)}
-                                                                    className="py-2 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold transition-all whitespace-nowrap"
-                                                                >
-                                                                    {hw.assignees.length === activeClass.students.length ? '전체' : `${hw.assignees.length}명`}
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            <button onClick={() => setHwModalIdx(idx)}
+                                                                className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-2.5 py-2 rounded-lg text-[10px] font-bold border border-amber-500/20 transition-colors whitespace-nowrap">
+                                                                <ClipboardCheck size={14} /> 상태체크
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setHwAssignIdx(idx)}
+                                                                className="py-2 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold transition-all whitespace-nowrap"
+                                                            >
+                                                                {hw.assignees.length === activeClass.students.length ? '전체' : `${hw.assignees.length}명`}
+                                                            </button>
+                                                        </div>
                                                         {sharedForm.homeworks.length > 1 && (
                                                             <button onClick={() => removeHomework(idx)} className="text-slate-600 hover:text-rose-400 p-1"><X size={16} /></button>
                                                         )}
@@ -1277,7 +1275,6 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                                                                                             return { ...prev, test_scores: newScores };
                                                                                         })} className="bg-black border border-white/10 rounded px-2 py-1.5 text-[10px] text-slate-400 focus:outline-none">
                                                                                             <option value="">(직접입력)</option>
-                                                                                            <option value="해당없음">해당없음</option>
                                                                                             <option value="미응시(결석)">미응시(결석)</option>
                                                                                             <option value="연기">연기</option>
                                                                                         </select>
