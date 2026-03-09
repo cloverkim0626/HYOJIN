@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>High-Res Magazine Report</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --brand-color: #1a365d;
+            --point-red: #b91c1c;
+            --neutral-black: #111827;
+            --neutral-gray: #6b7280;
+            --bg-soft: #f9fafb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        
+        body { 
+            background-color: #ffffff;
+            font-family: 'Pretendard', -apple-system, sans-serif; 
+            color: var(--neutral-black);
+            padding: 40px 20px;
+            display: flex; justify-content: center;
+        }
+
+        .wrapper { width: 100%; max-width: 380px; }
+
+        .header { 
+            border-bottom: 6px solid var(--neutral-black); 
+            padding-bottom: 24px; 
+            margin-bottom: 40px;
+        }
+        .header-tag { 
+            font-size: 11px; font-weight: 900; color: var(--brand-color); 
+            letter-spacing: 0.15em; margin-bottom: 8px;
+        }
+        .header-name { 
+            font-size: 32px; font-weight: 800; line-height: 1.1; 
+            letter-spacing: -0.05em; margin-bottom: 12px;
+        }
+        .header-meta { 
+            display: flex; justify-content: space-between; 
+            font-size: 13px; font-weight: 600; color: var(--neutral-gray);
+        }
+
+        .section { margin-bottom: 40px; }
+        .section-label { 
+            font-size: 11px; font-weight: 900; border-top: 1px solid var(--neutral-black); 
+            padding-top: 8px; margin-bottom: 16px; display: block; color: var(--neutral-gray);
+        }
+
+        .content-h { font-size: 19px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.03em; }
+        .content-p { font-size: 15px; line-height: 1.75; color: #374151; font-weight: 400; }
+        
+        .status-wrap { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .badge { 
+            font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 2px;
+        }
+        .badge-red { background: #fef2f2; color: var(--point-red); border: 1px solid #fecaca; }
+        .badge-blue { background: #eff6ff; color: var(--brand-color); border: 1px solid #bfdbfe; }
+        .badge-gray { background: #f3f4f6; color: var(--neutral-gray); border: 1px solid #e5e7eb; }
+        .plan-box { font-size: 13px; color: var(--point-red); font-weight: 600; line-height: 1.5; margin-top: 8px; }
+
+        .test-item { margin-bottom: 35px; }
+        .test-flex { display: flex; justify-content: space-between; align-items: flex-end; }
+        .test-title { font-size: 17px; font-weight: 800; color: var(--neutral-black); }
+        .test-desc { font-size: 12px; color: var(--neutral-gray); margin-top: 3px; }
+        
+        .score-group { text-align: right; }
+        .score-big { font-size: 40px; font-weight: 900; line-height: 0.8; color: var(--brand-color); letter-spacing: -0.04em; }
+        .score-small { font-size: 14px; color: #d1d5db; font-weight: 600; margin-left: 2px; }
+
+        .chart-bg { height: 3px; background: #f3f4f6; position: relative; margin: 18px 0 10px 0; }
+        .chart-bar { height: 100%; background: var(--brand-color); transition: width 0.8s ease; }
+        .avg-dot { 
+            position: absolute; top: -5px; width: 12px; height: 12px; 
+            background: #fff; border: 3px solid var(--neutral-black); border-radius: 50%;
+        }
+        .chart-info { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--neutral-gray); }
+
+        .comment-card { background: var(--bg-soft); padding: 24px; border-radius: 4px; border-left: 4px solid var(--brand-color); }
+        .comment-to { font-size: 19px; font-weight: 800; margin-bottom: 14px; display: block; color: var(--brand-color); }
+        .comment-body { font-size: 15px; line-height: 1.8; color: #1f2937; white-space: pre-wrap; }
+        .comment-body b { color: var(--brand-color); font-weight: 800; }
+
+        .footer { margin-top: 50px; border-top: 1px solid #f3f4f6; padding-top: 30px; text-align: center; }
+        .btn-consult { 
+            display: block; background: var(--neutral-black); color: #fff; 
+            text-decoration: none; padding: 20px; font-size: 14px; font-weight: 800;
+            letter-spacing: 0.05em; margin-bottom: 25px; transition: 0.2s;
+        }
+        .btn-consult:hover { opacity: 0.9; }
+        .copy { font-size: 10px; font-weight: 700; color: #d1d5db; letter-spacing: 0.15em; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header class="header">
+        <p class="header-tag">HIGH-RESOLUTION ANALYSIS</p>
+        <h1 class="header-name">源?곕룆 ?숈깮<br>?숈뒿 蹂닿퀬??/h1>
+        <div class="header-meta">
+            <span>[怨듦컻?? 由ы룷???섑뵆</span>
+            <span>2026.03.09 ?붿슂??/span>
+        </div>
+    </header>
+
+    <section class="section">
+        <span class="section-label">01 / 異쒓껐 諛??ㅻ뒛 ?숈뒿 ?댁슜</span>
+        <div class="content-h" style="color:var(--brand-color)">??吏媛?(20:22)
+?ъ쑀: ?숈븘由??쒕룞</div>
+        <div class="content-p" style="white-space: pre-wrap;">1. ?섎뒫?밴컯 8媛?2~4踰?吏臾??댁떊?鍮?遺꾩꽍 ?꾨즺. 
+2. ?섎뒫?밴컯 9媛?gateway ?댁꽕 諛??섎뒫 二쇱젣?좏삎 ??대쾿 ?숈뒿.
+3. 7媛?蹂?뺣Ц??梨꾩젏 ??二쇱슂臾명빆 Q&A </div>
+    </section>
+
+    <section class="section">
+        <span class="section-label">02 / 怨쇱젣 ?꾨즺 ?꾪솴</span>
+        <div class="status-wrap">
+            <span class="content-h">?섎뒫?밴컯 7媛??뚰겕遺?紐⑤몢 ?湲?/span>
+            <span class="badge badge-red">援먯옱誘몄?李?/span>
+        </div>
+        <p class="plan-box" style="display: block">??蹂댁셿怨꾪쉷: 3/11(??源뚯? 移댄넚?쇰줈 李띿뼱???щ━湲?</p>
+    </section>
+
+    <section class="section">
+        <span class="section-label">03 / ?뚯뒪???깆랬??遺꾩꽍</span>
+        
+        <div class="test-item">
+            <div class="test-flex">
+                <div>
+                    <p class="test-title" style="">?섎뒫?밴컯 ?⑥뼱 TEST</p>
+                    <p class="test-desc">7-9媛?/p>
+                </div>
+                <div class="score-group">
+                    <span class="score-big" style="">144</span><span class="score-small">/150</span>
+                </div>
+            </div>
+            <div class="chart-bg">
+                <div class="chart-bar" style="width: 96%; "></div>
+                <div class="avg-dot" style="left: 96%;"></div>
+            </div>
+            <div class="chart-info">
+                <span style="">?ъ꽦瑜? 96.0%</span>
+                <span>諛??됯퇏: 144??/span>
+            </div>
+            <p style="font-size:12px;color:var(--point-red);font-weight:600;margin-top:8px;">??Fail ???ъ떆???꾨즺</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <span class="section-label">04 / ?ㅼ쓬 李⑥떆 ?덈궡</span>
+        <div class="content-h">2026-03-15</div>
+        <div class="content-p" style="font-weight: 500; white-space: pre-wrap;"><?꾩껜>
+???섎뒫?밴컯 8媛?2~4踰??뚰겕遺?紐⑤몢 ?湲????섎뒫?밴컯 8媛?蹂?뺣Ц??紐⑤몢 ?湲????섎뒫?밴컯 7媛?蹂?뺣Ц???ㅻ떟?명듃 ?묒꽦
+???섎뒫?밴컯 ?⑥뼱 10-12媛??붽린
+???ㅻ뒛 ?볦튇遺遺?(8媛? ?곸긽蹂닿퀬 quiz ?湲? https://hyojin-omega.vercel.app/ ?섏뾽?곸긽? ?뺤씤.</div>
+    </section>
+
+    <section class="section">
+        <span class="section-label">05 / ?좎깮??肄붾찘??/span>
+        <div class="comment-card">
+            <span class="comment-to">To. 源?곕룆 ?숇?紐⑤떂</span>
+            <p class="comment-body">?덈뀞?섏꽭?? ?곕룆?숈썝 ?곸뼱 ?⑥쭊T ?낅땲??<br><br>?숈븘由??쒕룞?쇰줈 吏媛곹븯???볦튇 遺遺??곸긽?쒖껌 諛??댁쫰?묒떆 吏?꾪븯??듬땲?? ?뚰겕遺곴낵 蹂?뺣Ц??誘몄셿遺遺?3/11 ?ш????덉젙?낅땲??
+
+OO?닿? ?숈뒿???댁쓽 ?덉쑝???꾩쭅 ?숈뒿?듦????ㅼ옟?덉? ?딆븘, 怨쇱젣 ?댄뻾瑜좎씠 ?믪? ?딆뒿?덈떎. ?ш????쇱젙???욌떦寃④?硫?議곌툑 ???깆떎??怨쇱젣?섑뻾?????덈룄濡?吏?꾪븯寃좎뒿?덈떎.
+
+7媛?蹂?뺣Ц?????Q&A 怨쇱젙?먯꽌 二쇱젣 ?좏삎留롮씠 ????ㅻ떟 ?좊룄?섎뒗 怨쇱젙 ?먭??섏?怨?援ъ“?? ?뚯옱 諛?臾몄옣媛??곌껐???뚯븙 ?깆쓣 ?듯빐 湲???댄빐???믪뿬?섍컝 怨꾪쉷?낅땲??<br><br>沅곴툑?섏떊 ?ы빆? ?명븯寃?臾몄쓽二쇱꽭?? 媛먯궗?⑸땲?? :)</p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <a href="https://open.kakao.com/o/sY6xBxji" class="btn-consult">?좎깮?섍낵 吏곸젒 ?곷떞?섍린</a>
+        <p class="copy">KIM HYOJIN ENGLISH / HD ANALYSIS</p>
+    </footer>
+</div>
+
+</body>
+</html>

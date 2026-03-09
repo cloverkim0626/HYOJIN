@@ -555,14 +555,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 // Only include if assigned to this student (or everyone)
                 if (hw.assignees.length > 0 && !hw.assignees.includes(student.id)) return;
 
-                const badgeClass = (sts.status === '확인완료' || sts.status === '미완 후 보충완료') ? 'badge-blue' : 'badge-red';
+                const isComplete = sts.status === '확인완료' || sts.status === '미완 후 보충완료';
+                const badgeClass = isComplete ? 'badge-blue b-b' : 'badge-red b-r';
+                const badgeStyle = isComplete ? 'background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;' : 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;';
                 hwHtml += `
         <div style="margin-bottom: 12px;">
-            <div class="status-wrap">
-                <span class="content-h">${hw.name}</span>
-                <span class="badge ${badgeClass}">${sts.status}</span>
+            <div class="status-wrap" style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="content-h" style="font-size:14px; font-weight:800;">${hw.name}</span>
+                <span class="badge ${badgeClass}" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:3px; ${badgeStyle}">${sts.status}</span>
             </div>
-            ${(sts.status !== '확인완료' && sts.status !== '미완 후 보충완료') && sts.plan ? `<p class="plan-box">→ 보완계획: ${sts.plan}</p>` : ''}
+            ${!isComplete && sts.plan ? `<p class="plan-box" style="font-size:13px; color:#dc2626; font-weight:600; margin-top:6px;">→ 보완계획: ${sts.plan}</p>` : ''}
         </div>`;
             });
 
