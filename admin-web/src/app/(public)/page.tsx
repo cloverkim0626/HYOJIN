@@ -22,7 +22,8 @@ import {
     CheckCircle2,
     BookOpen,
     PenTool,
-    AlertCircle
+    AlertCircle,
+    Siren
 } from 'lucide-react';
 import Image from 'next/image';
 import AdminPanel from './AdminPanel';
@@ -1098,10 +1099,10 @@ const ReportSection = () => {
 
                             {/* Personal Premium Greeting */}
                             <div className="pt-8 pb-4 text-center relative">
-                                {/* Missing Assignment Tracker Button with Glow (Glass Circle) */}
+                                {/* Missing Assignment Tracker Button with Glow (Glass Circle, Fixed for Light BG) */}
                                 <button onClick={() => setShowStudentTracker(true)}
-                                    className="absolute top-4 right-0 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-white bg-white/10 backdrop-blur-md w-16 h-16 rounded-full transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] hover:bg-white/20 border border-white/20 hover:scale-105 active:scale-95 z-50 overflow-hidden leading-tight text-center">
-                                    <Search size={16} className="text-white/90" />
+                                    className="absolute top-4 right-0 flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-rose-600 bg-white/70 backdrop-blur-md w-16 h-16 rounded-full transition-all shadow-[0_4px_15px_rgba(225,29,72,0.15)] hover:shadow-[0_4px_25px_rgba(225,29,72,0.3)] hover:bg-white border border-rose-200 hover:scale-105 active:scale-95 z-50 overflow-hidden leading-tight text-center">
+                                    <Siren size={18} className="text-rose-500 mb-0.5 animate-pulse" />
                                     <span>미완과제<br />추적</span>
                                 </button>
                                 <p className="text-sm text-slate-400 font-medium mb-1 tracking-tight">우독학원 영어 효진T</p>
@@ -1208,7 +1209,7 @@ const ReportSection = () => {
                                 <div className="p-10 pb-6 border-b border-white/5 flex items-start justify-between relative z-10">
                                     <div className="flex items-center gap-6">
                                         <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shadow-inner">
-                                            <ClipboardList className="text-rose-400" size={28} />
+                                            <Siren className="text-rose-400 animate-pulse" size={28} />
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-white text-2xl tracking-tight">미완과제 추적기</h3>
