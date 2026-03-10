@@ -546,7 +546,7 @@ const TimetableSection = () => {
         {
             class: '[WOODOK] 아라고2',
             times: [
-                { day: '월', time: '19:30 - 21:30', type: '정규' },
+                { day: '월', time: '18:00 - 20:00', type: '정규' },
                 { day: '수', time: '19:30 - 21:30', type: '정규' },
                 { day: '금', time: '17:00 - 20:00', type: '클리닉' }
             ]
@@ -562,7 +562,7 @@ const TimetableSection = () => {
         {
             class: '[WOODOK] 아라고1',
             times: [
-                { day: '월', time: '17:00 - 19:00', type: '정규' },
+                { day: '월', time: '20:00 - 22:00', type: '정규' },
                 { day: '수', time: '17:00 - 19:00', type: '정규' },
                 { day: '토', time: '16:00 - 19:00', type: '클리닉' }
             ]
@@ -570,7 +570,7 @@ const TimetableSection = () => {
         {
             class: '[WOODOK] 원당고1',
             times: [
-                { day: '월', time: '17:00 - 19:00', type: '정규' },
+                { day: '월', time: '20:00 - 22:00', type: '정규' },
                 { day: '수', time: '17:00 - 19:00', type: '정규' },
                 { day: '토', time: '16:00 - 19:00', type: '클리닉' }
             ]
