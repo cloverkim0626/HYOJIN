@@ -542,9 +542,12 @@ const HomeSection = () => {
 };
 
 const TimetableSection = () => {
+    const [selectedSyllabus, setSelectedSyllabus] = useState<string | null>(null);
+
     const schedule = [
         {
             class: '[WOODOK] 아라고2',
+            syllabusUrl: '/syllabus/arago2.html',
             times: [
                 { day: '월', time: '18:00 - 20:00', type: '정규' },
                 { day: '수', time: '19:30 - 21:30', type: '정규' },
@@ -553,6 +556,7 @@ const TimetableSection = () => {
         },
         {
             class: '[WOODOK] 고3 내신&수능 Rebound반',
+            syllabusUrl: '/syllabus/rebound3.html',
             times: [
                 { day: '금', time: '20:30 - 22:30', type: '정규' },
                 { day: '토', time: '19:00 - 21:00', type: '정규' },
@@ -561,6 +565,7 @@ const TimetableSection = () => {
         },
         {
             class: '[WOODOK] 아라고1',
+            syllabusUrl: '/syllabus/arago1.html',
             times: [
                 { day: '월', time: '20:00 - 22:00', type: '정규' },
                 { day: '수', time: '17:00 - 19:00', type: '정규' },
@@ -569,6 +574,7 @@ const TimetableSection = () => {
         },
         {
             class: '[WOODOK] 원당고1',
+            syllabusUrl: '/syllabus/wondang1.html',
             times: [
                 { day: '월', time: '20:00 - 22:00', type: '정규' },
                 { day: '수', time: '17:00 - 19:00', type: '정규' },
@@ -592,7 +598,10 @@ const TimetableSection = () => {
                                     <span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
                                     {item.class}
                                 </div>
-                                <button onClick={() => alert("곧 업로드 예정입니다.")} className="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
+                                <button
+                                    onClick={() => setSelectedSyllabus(item.syllabusUrl)}
+                                    className="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-sm"
+                                >
                                     <ClipboardList size={12} /> 강의계획서
                                 </button>
                             </h4>
@@ -615,6 +624,47 @@ const TimetableSection = () => {
                         </div>
                     ))}
                 </div>
+
+                {/* Syllabus iframe 모달 */}
+                <AnimatePresence>
+                    {selectedSyllabus && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                                onClick={() => setSelectedSyllabus(null)}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="bg-white w-full max-w-2xl rounded-3xl relative z-10 shadow-2xl h-[85vh] flex flex-col overflow-hidden text-left"
+                            >
+                                <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <ClipboardList size={18} className="text-blue-500" /> 강의계획서
+                                    </h3>
+                                    <button
+                                        onClick={() => setSelectedSyllabus(null)}
+                                        className="p-2 bg-white hover:bg-slate-200 rounded-full text-slate-500 transition-colors border border-slate-200 shadow-sm"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="flex-1 w-full bg-slate-100 relative max-h-[calc(85vh-60px)]">
+                                    <iframe
+                                        src={selectedSyllabus}
+                                        className="absolute inset-0 w-full h-full border-0 bg-white"
+                                        title="Syllabus Document"
+                                    />
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
             </div>
         </SectionWrapper>
     );

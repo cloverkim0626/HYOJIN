@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REBOUND 03 | THE FIRST DRIVE</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        :root {
+            --atlantic-red: #C20000;
+            --black: #000000;
+            --white: #ffffff;
+            --gray: #f8f8f8;
+            --text-dark: #111111;
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; letter-spacing: -0.02em; }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: var(--white);
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+
+        header {
+            background-color: var(--black);
+            color: var(--white);
+            padding: 70px 20px 60px;
+            text-align: center;
+            border-bottom: 8px solid var(--atlantic-red);
+        }
+        .brand-label {
+            font-size: 0.8rem;
+            letter-spacing: 6px;
+            font-weight: 300;
+            margin-bottom: 20px;
+            display: block;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .main-title {
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 0.8;
+            margin: 0;
+            letter-spacing: -4px;
+            text-transform: uppercase;
+        }
+        .sub-title {
+            font-size: 1.1rem;
+            margin-top: 35px;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: 12px; 
+            text-indent: 12px; 
+            text-transform: uppercase;
+            opacity: 0.95;
+        }
+
+        /* --- 원당고 전용 섹션 --- */
+        .wondang-box {
+            background: #f1f5f9;
+            padding: 20px;
+            margin: 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .wondang-title {
+            font-size: 0.9rem;
+            font-weight: 900;
+            color: #0046ff;
+            display: block;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .wondang-schedule {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85rem;
+            color: #333;
+            font-weight: 600;
+        }
+        .wondang-schedule span { color: #666; font-weight: 400; margin-right: 4px;}
+
+        .nav-wrap {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            border-bottom: 2px solid #000;
+        }
+        .nav-item {
+            padding: 18px 5px; text-align: center; text-decoration: none;
+            color: #000; font-size: 0.8rem; font-weight: 800;
+            border-right: 1px solid #eee;
+        }
+        .nav-item:last-child { border-right: none; }
+        .nav-item span { display: block; font-size: 0.6rem; color: #888; font-weight: 500; margin-top: 4px; }
+
+        .container { max-width: 650px; margin: 0 auto; padding: 60px 20px; }
+
+        .week-block { margin-bottom: 90px; scroll-margin-top: 100px; }
+        .week-header {
+            border-left: 6px solid var(--black);
+            padding-left: 15px;
+            margin-bottom: 30px;
+        }
+        .week-no { font-size: 2.5rem; font-weight: 900; line-height: 1; display: block; }
+        .week-date { font-size: 0.95rem; font-weight: 600; color: var(--atlantic-red); text-transform: uppercase; }
+
+        .drive-topic { font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; word-break: keep-all; }
+        
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { 
+            font-size: 1.1rem; margin-bottom: 16px; padding-left: 24px;
+            position: relative; font-weight: 500; color: #333;
+        }
+        li::before {
+            content: ""; position: absolute; left: 0; top: 10px;
+            width: 12px; height: 3px; background: #ddd;
+        }
+
+        .clinic-section {
+            background: var(--gray); padding: 25px; margin-top: 30px;
+            border-radius: 2px;
+        }
+        .clinic-section h4 { 
+            margin: 0 0 15px 0; font-size: 0.85rem; letter-spacing: 2px;
+            text-transform: uppercase; color: #555; border-bottom: 1px solid #ddd;
+            display: inline-block; padding-bottom: 3px;
+        }
+
+        .emph { font-weight: 800; color: var(--black); background: linear-gradient(transparent 70%, #fde047 30%); }
+        .base-badge { 
+            display: block; background: #fff4f4; color: #ff0000; 
+            padding: 10px 15px; font-size: 0.85rem; font-weight: 800; 
+            margin-top: 15px; border-radius: 4px; border: 1px solid #ff0000;
+        }
+
+        .action-area { margin-top: 70px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn {
+            display: flex; align-items: center; justify-content: center;
+            height: 65px; text-decoration: none; font-weight: 800; font-size: 0.9rem;
+            border-radius: 4px; text-align: center;
+        }
+        .btn-call { background: var(--black); color: var(--white); }
+        .btn-kakao { background: #fee500; color: #1a1a1c; }
+
+        footer { text-align: center; padding: 80px 20px; font-size: 0.75rem; color: #bbb; letter-spacing: 2px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="brand-label">REBOUND STRATEGY</span>
+    <h1 class="main-title">REBOUND 03</h1>
+    <div class="sub-title">2026 첫 번째 내신 드라이브</div>
+</header>
+
+<div class="wondang-box">
+    <span class="wondang-title">📍 원당고 수강 가이드 (금요일 선택)</span>
+    <div class="wondang-schedule">
+        <div><span>MON</span> 22:00-23:00</div>
+        <div><span>SAT</span> 19:00-20:00 (수업) / 20:00-22:00 (클리닉)</div>
+    </div>
+</div>
+
+<nav class="nav-wrap">
+    <a href="#w1" class="nav-item">WEEK 1<span>3/16 - 3/21</span></a>
+    <a href="#w2" class="nav-item">WEEK 2<span>3/23 - 3/28</span></a>
+    <a href="#w3" class="nav-item">WEEK 3<span>3/30 - 4/04</span></a>
+    <a href="#w4" class="nav-item">WEEK 4<span>4/06 - 4/11</span></a>
+    <a href="#w5" class="nav-item">WEEK 5<span>4/13 - 4/18</span></a>
+    <a href="#w6" class="nav-item">WEEK 6<span>4/20 - 4/25</span></a>
+</nav>
+
+<div class="container">
+
+    <section class="week-block" id="w1">
+        <div class="week-header">
+            <span class="week-date">3월 19일, 20일, 21일</span>
+            <span class="week-no">WEEK 01</span>
+        </div>
+        <div class="drive-topic">수능특강 학교별 심화독해</div>
+        <ul>
+            <li>매 지문별 중요어법 포인트 + <span class="emph">서술형 영작 연습</span></li>
+            <li>판서 및 자료 동기화 시스템 기반 출력형 수업</li>
+        </ul>
+        <div class="base-badge">⚠️ 기초구문 수업 대상자: 금요일 18:00 필수 참석</div>
+        <div class="clinic-section">
+            <h4>Saturday Review & Clinic</h4>
+            <ul>
+                <li>해당 주차 진도 Review 및 어휘 테스트</li>
+                <li><span class="emph">조교 1:1 내용이해 구술 테스트</span></li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="week-block" id="w2">
+        <div class="week-header">
+            <span class="week-date">3월 26일, 27일, 28일</span>
+            <span class="week-no">WEEK 02</span>
+        </div>
+        <div class="drive-topic">수능특강 학교별 진도 심화독해</div>
+        <ul>
+            <li>매 지문별 중요어법 포인트 + <span class="emph">서술형 영작 연습</span></li>
+            <li>판서 및 자료 동기화 시스템 기반 출력형 수업</li>
+        </ul>
+        <div class="base-badge">⚠️ 기초구문 수업 대상자: 금요일 18:00 필수 참석</div>
+        <div class="clinic-section">
+            <h4>Saturday Review & Clinic</h4>
+            <ul>
+                <li>주간 진도 점검 및 1:1 구술 피드백</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="week-block" id="w3">
+        <div class="week-header">
+            <span class="week-date">4월 2일, 3일, 4일</span>
+            <span class="week-no">WEEK 03</span>
+        </div>
+        <div class="drive-topic">수능특강 진도 심화독해 완료</div>
+        <ul>
+            <li>주요 지문별 시험 출제 포인트 총정리</li>
+            <li>재미있게 듣고(input), 능동적으로 출력(output)</li>
+        </ul>
+        <div class="base-badge">⚠️ 기초구문 수업 대상자: 금요일 18:00 필수 참석</div>
+        <div class="clinic-section">
+            <h4>Saturday Review & Clinic</h4>
+            <ul>
+                <li>수특 1~3주차 누적 어휘 및 구술 최종 테스트</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="week-block" id="w4">
+        <div class="week-header">
+            <span class="week-date">4월 9일, 10일, 11일</span>
+            <span class="week-no">WEEK 04</span>
+        </div>
+        <div class="drive-topic">실전 드라이브: 내신은 실전이다!</div>
+        <ul>
+            <li>학교별 <span class="emph">제작 예상 문제 풀이</span></li>
+            <li>개인별 취약유형 집중 공략</li>
+            <li>추가 프린트 및 추가진도 catch-up</li>
+        </ul>
+        <div class="base-badge" style="background:#eee; border-color:#ccc; color:#555;">
+            📍 4주차 이후 합반 계획 있음 (추후 공지)
+        </div>
+        <div class="clinic-section">
+            <h4>Saturday Real-Check</h4>
+            <ul>
+                <li>학교별 실전형 Review TEST</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="week-block" id="w5">
+        <div class="week-header">
+            <span class="week-date">4월 16일, 17일, 18일</span>
+            <span class="week-no">WEEK 05</span>
+        </div>
+        <div class="drive-topic">실전 드라이브: 시뮬레이션</div>
+        <ul>
+            <li>매회차 실전 모의고사 진행 (서술형 포함)</li>
+            <li>틀린 문항에 대한 개별 피드백 및 약점 보완</li>
+        </ul>
+        <div class="clinic-section">
+            <h4>Saturday Final Clinic</h4>
+            <p style="font-size: 0.9rem; font-weight:600;">실전 점검 기간: 본수업과 동일한 실전 테스트 진행</p>
+        </div>
+    </section>
+
+    <section class="week-block" id="w6">
+        <div class="week-header">
+            <span class="week-date">4월 23일, 24일, 25일</span>
+            <span class="week-no">WEEK 06</span>
+        </div>
+        <div class="drive-topic">파이널 드라이브: WINNING FLOW</div>
+        <ul>
+            <li>최종 적중 문항 리뷰 및 혼동 어휘 마스터</li>
+            <li>시험장 지참용 <span class="emph">핵심 개념/어휘 정리자료</span> 제공</li>
+        </ul>
+        <div class="clinic-section">
+            <h4>Saturday Final Drive</h4>
+            <p style="font-size: 0.9rem; font-weight:600;">최종 약점 보완을 위한 1:1 클리닉 진행</p>
+        </div>
+    </section>
+
+    <div style="border-top: 2px solid #000; margin: 80px 0 60px;"></div>
+
+    <div class="drive-topic">WEEKLY TASKS (공통 과제)</div>
+    <ul>
+        <li>시험 적중 핵심 문항 <span class="emph">실전형 워크북</span></li>
+        <li>강사 직접 선별/제작 <span class="emph">변형문제 풀이</span></li>
+        <li>어플 기반 <span class="emph">재미있는 단어 암기</span> (유/반의어 포함)</li>
+    </ul>
+
+    <div class="action-area">
+        <a href="tel:0507-1343-4054" class="btn btn-call">등록 문의 (우독학원)</a>
+        <a href="https://open.kakao.com/o/sY6xBxji" class="btn btn-kakao">강사 상담 (카카오톡)</a>
+    </div>
+
+</div>
+
+<footer>
+    © 2026 HIGH-EFFICIENCY ENGLISH DRIVE. ALL RIGHTS RESERVED.
+</footer>
+
+</body>
+</html>
