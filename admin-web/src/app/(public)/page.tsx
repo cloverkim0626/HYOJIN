@@ -280,14 +280,14 @@ const HomeSection = () => {
                         <div className="absolute left-[5%] sm:left-[18%] top-1/2 -translate-y-[40%] z-20 hidden sm:flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
-                                className="group relative w-24 h-24 flex items-center justify-center transition-transform hover:scale-110 duration-500"
+                                className="group relative w-20 h-20 flex items-center justify-center transition-transform hover:scale-110 duration-500"
                             >
                                 {/* Glowing Background Circle */}
                                 <div className="absolute inset-0 bg-yellow-400/20 rounded-full blur-xl group-hover:bg-yellow-400/40 transition-all duration-700" />
                                 
-                                {/* The Circle - Gold Filled */}
-                                <div className="absolute inset-0 rounded-full border border-yellow-200/50 group-hover:border-white/80 transition-all duration-500 bg-gradient-to-br from-yellow-500 via-yellow-200 to-yellow-600 flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_5px_20px_rgba(255,215,0,0.4)] group-hover:shadow-[0_8px_30px_rgba(255,215,0,0.6)]">
-                                    <span className="text-[14px] font-black leading-tight tracking-tight text-slate-900 drop-shadow-sm">
+                                {/* The Circle - Gold Filled with refined typography */}
+                                <div className="absolute inset-0 rounded-full border border-yellow-100/40 group-hover:border-white transition-all duration-500 bg-gradient-to-br from-[#d4af37] via-[#f9f295] to-[#ab8e28] flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_5px_15px_rgba(0,0,0,0.3)]">
+                                    <span className="text-[12px] font-bold leading-tight tracking-[0.05em] text-[#3a2d04] drop-shadow-sm" style={{ fontFamily: "serif" }}>
                                         성적 향상<br />사례
                                     </span>
                                 </div>
@@ -296,7 +296,7 @@ const HomeSection = () => {
                                 <motion.div 
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                                    className="absolute -inset-1.5 border border-dashed border-yellow-200/40 rounded-full pointer-events-none"
+                                    className="absolute -inset-1 border border-dashed border-yellow-200/30 rounded-full pointer-events-none"
                                 />
                             </button>
                         </div>
@@ -319,11 +319,11 @@ const HomeSection = () => {
                         <div className="absolute left-3 top-3 z-20 sm:hidden flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
-                                className="group relative w-20 h-20 flex items-center justify-center transition-transform hover:scale-105 duration-300"
+                                className="group relative w-16 h-16 flex items-center justify-center transition-transform hover:scale-105 duration-300"
                             >
                                 <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-lg" />
-                                <div className="absolute inset-0 rounded-full border border-yellow-100/50 bg-gradient-to-br from-yellow-500 via-yellow-100 to-yellow-600 flex flex-col items-center justify-center p-2 text-center shadow-[0_4px_15px_rgba(255,215,0,0.4)]">
-                                    <span className="text-[11px] font-black leading-tight tracking-tight text-slate-900">
+                                <div className="absolute inset-0 rounded-full border border-yellow-100/40 bg-gradient-to-br from-[#d4af37] via-[#f9f295] to-[#ab8e28] flex flex-col items-center justify-center p-1 text-center shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
+                                    <span className="text-[10px] font-bold leading-tight tracking-[0.05em] text-[#3a2d04]">
                                         성적 향상<br />사례
                                     </span>
                                 </div>

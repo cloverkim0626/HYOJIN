@@ -186,7 +186,7 @@ export default function DriveSection() {
                                 <div className="flex flex-col">
                                     <div className="mb-6 flex items-center gap-3 ml-1">
                                         <div className="w-1.5 h-5 bg-[#c20000] rounded-full shadow-[0_0_10px_rgba(194,0,0,0.8)]"></div>
-                                        <h3 className="text-xl font-bold text-white tracking-tight">Select Class</h3>
+                                        <h3 className="text-xl font-bold text-white tracking-tight">수강하는 반 선택</h3>
                                     </div>
                                     {classes.length === 0 && !isLoading && (
                                         <div className="text-sm text-slate-400 py-10 text-center bg-[#111118]/60 backdrop-blur-md border border-white/10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.2)]">등록된 반이 없습니다.</div>
@@ -198,7 +198,7 @@ export default function DriveSection() {
                                             className="w-full relative overflow-hidden text-left py-6 px-7 mb-4 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 rounded-3xl hover:border-white/30 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_15px_40px_rgba(194,0,0,0.15)] hover:-translate-y-1 transition-all duration-500 flex justify-between items-center group"
                                         >
                                             <div className="flex flex-col z-10">
-                                                <span className="text-[0.6rem] font-bold text-[#c20000] mb-2 tracking-[0.2em] uppercase origin-left transition-transform duration-500 focus:scale-105 drop-shadow-[0_0_5px_rgba(194,0,0,0.5)]">Class Selection</span>
+                                                <span className="text-[0.6rem] font-bold text-[#c20000] mb-2 tracking-[0.2em] uppercase origin-left transition-transform duration-500 focus:scale-105 drop-shadow-[0_0_5px_rgba(194,0,0,0.5)]">수강하는 반 선택</span>
                                                 <span className="font-semibold text-2xl tracking-tight text-slate-300 group-hover:text-white transition-colors">{cls.name}</span>
                                             </div>
                                             <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5 group-hover:bg-[#c20000] group-hover:border-[#c20000] group-hover:text-white transition-all duration-500 z-10 shrink-0 shadow-sm text-slate-400">
@@ -219,7 +219,7 @@ export default function DriveSection() {
                                             </button>
                                             
                                             <div className="px-7 py-8 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 rounded-3xl mb-6 shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex flex-col justify-center">
-                                                <p className="text-[0.65rem] text-[#c20000] uppercase tracking-[0.25em] font-bold mb-3 drop-shadow-[0_0_5px_rgba(194,0,0,0.5)]">Replay Library</p>
+                                                <p className="text-[0.65rem] text-[#c20000] uppercase tracking-[0.25em] font-bold mb-3 drop-shadow-[0_0_5px_rgba(194,0,0,0.5)]">학습 라이브러리</p>
                                                 <h3 className="font-bold text-3xl tracking-tight text-white">{selectedClass.name}</h3>
                                             </div>
 
