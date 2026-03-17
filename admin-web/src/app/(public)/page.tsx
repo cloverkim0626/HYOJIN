@@ -122,37 +122,39 @@ const App = () => {
                                 transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
                             />
                         </h1>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+                            <div className="flex items-center gap-2 sm:order-2">
+                                <a href="https://open.kakao.com/o/sY6xBxji" target="_blank" rel="noreferrer" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FEE500] hover:bg-[#ffe833] text-[#371d1e] flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="카카오톡 상담">
+                                    <MessageCircle size={14} className="sm:size-4" fill="currentColor" strokeWidth={0} />
+                                </a>
+                                <a href="#" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#03C75A] hover:bg-[#04d661] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="네이버 블로그">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 sm:w-4 sm:h-4">
+                                        <path d="M16.273 12.844L9.088 2.502H3.14V21.5h6.046v-10.43l7.26 10.43h5.88V2.502h-5.99v10.342z" />
+                                    </svg>
+                                </a>
+                                <a href="#" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FF0000] hover:bg-[#ff3333] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="유튜브">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
+                                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                    </svg>
+                                </a>
+                                <a href="tel:010-7590-6260" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="전화 상담">
+                                    <Phone size={12} className="sm:size-3.5" fill="currentColor" strokeWidth={0} />
+                                </a>
+                            </div>
                             <motion.div
                                 animate={{ y: [0, -4, 0] }}
                                 transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                                className="hidden sm:flex items-center gap-1.5 mr-2"
+                                className="flex items-center gap-1 sm:order-1 sm:mr-1"
                             >
-                                <span className="text-[11px] font-bold text-white bg-white/10 px-2.5 py-1 rounded-full border border-white/20 shadow-sm flex items-center gap-1 backdrop-blur-sm">
-                                    <span className="relative flex h-2 w-2">
+                                <span className="text-[9px] sm:text-[11px] font-bold text-white bg-white/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-white/20 shadow-sm flex items-center gap-1 backdrop-blur-sm whitespace-nowrap">
+                                    <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c20000] opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#c20000]"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-[#c20000]"></span>
                                     </span>
                                     상담신청 Click!
                                 </span>
-                                <ChevronRight size={12} className="text-white/50" />
+                                <ChevronRight size={10} className="text-white/50 hidden sm:block" />
                             </motion.div>
-                            <a href="https://open.kakao.com/o/sY6xBxji" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#FEE500] hover:bg-[#ffe833] text-[#371d1e] flex items-center justify-center text-xs shadow-lg transition-transform hover:scale-110" title="카카오톡 상담">
-                                <MessageCircle size={16} fill="currentColor" strokeWidth={0} />
-                            </a>
-                            <a href="#" className="w-8 h-8 rounded-full bg-[#03C75A] hover:bg-[#04d661] text-white flex items-center justify-center text-xs font-bold shadow-lg transition-transform hover:scale-110" title="네이버 블로그">
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                    <path d="M16.273 12.844L9.088 2.502H3.14V21.5h6.046v-10.43l7.26 10.43h5.88V2.502h-5.99v10.342z" />
-                                </svg>
-                            </a>
-                            <a href="#" className="w-8 h-8 rounded-full bg-[#FF0000] hover:bg-[#ff3333] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="유튜브">
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                                </svg>
-                            </a>
-                            <a href="tel:010-7590-6260" className="w-8 h-8 rounded-full bg-slate-100 hover:bg-white text-slate-800 flex items-center justify-center shadow-lg transition-transform hover:scale-110" title="전화 상담">
-                                <Phone size={14} fill="currentColor" strokeWidth={0} />
-                            </a>
                         </div>
                     </div>
                 </header>
@@ -236,7 +238,6 @@ const HomeSection = () => {
     return (
         <SectionWrapper>
             <div className="relative flex flex-col justify-center items-center text-center pt-10 pb-0">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-transparent to-transparent pointer-events-none" />
 
                 <div className="relative w-full">
                     <motion.p
@@ -287,8 +288,8 @@ const HomeSection = () => {
                                 
                                 {/* The Circle - Gold Filled with refined typography */}
                                 <div className="absolute inset-0 rounded-full border border-yellow-100/40 group-hover:border-white transition-all duration-500 bg-gradient-to-br from-[#d4af37] via-[#f9f295] to-[#ab8e28] flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_5px_15px_rgba(0,0,0,0.3)]">
-                                    <span className="text-[12px] font-bold leading-tight tracking-[0.05em] text-[#3a2d04] drop-shadow-sm" style={{ fontFamily: "serif" }}>
-                                        성적 향상<br />사례
+                                    <span className="text-[11px] font-black leading-tight tracking-[0.05em] text-[#3a2d04] drop-shadow-sm uppercase" style={{ fontFamily: "serif" }}>
+                                        Hall of<br />Fame
                                     </span>
                                 </div>
 
@@ -323,8 +324,8 @@ const HomeSection = () => {
                             >
                                 <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-lg" />
                                 <div className="absolute inset-0 rounded-full border border-yellow-100/40 bg-gradient-to-br from-[#d4af37] via-[#f9f295] to-[#ab8e28] flex flex-col items-center justify-center p-1 text-center shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
-                                    <span className="text-[10px] font-bold leading-tight tracking-[0.05em] text-[#3a2d04]">
-                                        성적 향상<br />사례
+                                    <span className="text-[9px] font-black leading-tight tracking-[0.05em] text-[#3a2d04] uppercase">
+                                        Hall of<br />Fame
                                     </span>
                                 </div>
                             </button>
