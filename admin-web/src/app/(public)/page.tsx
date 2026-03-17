@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import AdminPanel from './AdminPanel';
+import DriveSection from './DriveSection';
 import { useReportStore } from '@/store/reportStore';
 
 const COLORS = {
@@ -164,7 +165,7 @@ const App = () => {
                     <AnimatePresence mode="wait">
                         {activeTab === 'home' && <HomeSection key="home" />}
                         {activeTab === 'timetable' && <TimetableSection key="timetable" />}
-                        {activeTab === 'video' && <VideoSection key="video" />}
+                        {activeTab === 'video' && <DriveSection key="video" />}
                         {activeTab === 'management' && <ManagementSection key="management" />}
                         {activeTab === 'report' && <ReportSection key="report" />}
                     </AnimatePresence>
