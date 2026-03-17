@@ -114,8 +114,8 @@ const App = () => {
                 {/* ── Header ── */}
                 <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#050508]/80 backdrop-blur-xl border-b border-white/10 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' : 'bg-transparent py-5'}`}>
                     <div className="px-6 flex justify-between items-center max-w-5xl mx-auto">
-                        <h1 className="text-xl sm:text-2xl font-black tracking-tighter drop-shadow-sm relative">
-                            <Typewriter text="THE HYOJIN" delay={500} loop={true} textClass="font-black tracking-[0.15em] text-white relative z-10 drop-shadow-md" />
+                        <h1 className="text-lg sm:text-2xl font-black tracking-tighter drop-shadow-sm relative">
+                            <Typewriter text="THE HYOJIN" delay={500} loop={true} textClass="font-black tracking-[0.1em] sm:tracking-[0.15em] text-white relative z-10 drop-shadow-md" />
                             <motion.div
                                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
                                 animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
@@ -283,11 +283,11 @@ const HomeSection = () => {
                                 className="group relative w-24 h-24 flex items-center justify-center transition-transform hover:scale-110 duration-500"
                             >
                                 {/* Glowing Background Circle */}
-                                <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-lg group-hover:bg-yellow-500/20 transition-all duration-700" />
+                                <div className="absolute inset-0 bg-yellow-400/20 rounded-full blur-xl group-hover:bg-yellow-400/40 transition-all duration-700" />
                                 
-                                {/* The Circle Border and Background */}
-                                <div className="absolute inset-0 rounded-full border border-yellow-500/30 group-hover:border-yellow-400/60 transition-all duration-500 bg-[#0a0a0f]/90 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_0_15px_rgba(255,215,0,0.1)] group-hover:shadow-[0_0_25px_rgba(255,215,0,0.3)]">
-                                    <span className="text-[14px] font-black leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-yellow-500 via-yellow-200 to-yellow-600 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+                                {/* The Circle - Gold Filled */}
+                                <div className="absolute inset-0 rounded-full border border-yellow-200/50 group-hover:border-white/80 transition-all duration-500 bg-gradient-to-br from-yellow-500 via-yellow-200 to-yellow-600 flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_5px_20px_rgba(255,215,0,0.4)] group-hover:shadow-[0_8px_30px_rgba(255,215,0,0.6)]">
+                                    <span className="text-[14px] font-black leading-tight tracking-tight text-slate-900 drop-shadow-sm">
                                         성적 향상<br />사례
                                     </span>
                                 </div>
@@ -296,7 +296,7 @@ const HomeSection = () => {
                                 <motion.div 
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                                    className="absolute -inset-1 border border-dashed border-yellow-500/20 rounded-full pointer-events-none"
+                                    className="absolute -inset-1.5 border border-dashed border-yellow-200/40 rounded-full pointer-events-none"
                                 />
                             </button>
                         </div>
@@ -316,14 +316,14 @@ const HomeSection = () => {
 
                         {/* 모바일 뷰 전용 명예의 전당 */}
                         {/* 모바일 뷰 전용 원형 결과버튼 */}
-                        <div className="absolute left-4 top-4 z-20 sm:hidden flex flex-col items-center">
+                        <div className="absolute left-3 top-3 z-20 sm:hidden flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
                                 className="group relative w-20 h-20 flex items-center justify-center transition-transform hover:scale-105 duration-300"
                             >
-                                <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-lg" />
-                                <div className="absolute inset-0 rounded-full border border-yellow-500/30 bg-[#0a0a0f]/90 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center shadow-[0_0_10px_rgba(255,215,0,0.1)]">
-                                    <span className="text-[12px] font-black leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-yellow-500 via-yellow-100 to-yellow-600 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                                <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-lg" />
+                                <div className="absolute inset-0 rounded-full border border-yellow-100/50 bg-gradient-to-br from-yellow-500 via-yellow-100 to-yellow-600 flex flex-col items-center justify-center p-2 text-center shadow-[0_4px_15px_rgba(255,215,0,0.4)]">
+                                    <span className="text-[11px] font-black leading-tight tracking-tight text-slate-900">
                                         성적 향상<br />사례
                                     </span>
                                 </div>
@@ -332,9 +332,9 @@ const HomeSection = () => {
                     </div>
 
                     <div className="w-full text-center space-y-4 relative z-10 px-4 mt-8">
-                        <h3 className="text-white font-black text-[26px] sm:text-3xl leading-snug mb-6 tracking-tighter drop-shadow-lg">
+                        <h3 className="text-white font-medium text-[20px] sm:text-[24px] leading-snug mb-6 tracking-tighter drop-shadow-lg opacity-90">
                             막히는 지점을 찾아,<br />
-                            나자신의 한계를 극복하는 수업.
+                            나자신의 한계를 극복하는 수업입니다.
                         </h3>
                         <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-bold">
                             <span className="text-white">개별 진단</span> <ArrowRight size={14} className="inline text-slate-500 mx-1" /> <span className="text-white">맞춤 커리큘럼</span> <ArrowRight size={14} className="inline text-slate-500 mx-1" /> <span className="text-[#c20000] font-black tracking-wide">[낭비 없는 고득점]</span>
