@@ -155,7 +155,7 @@ export default function DriveSection() {
                         onClick={() => { setIsLocked(false); setSelectedClass(null); setSelectedWeek(null); setIsAuthenticatedWeek(false); fetchInitialData(); }}
                         className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors duration-300 ${!isLocked ? 'text-white' : 'text-slate-500 hover:text-black'}`}
                     >
-                        샘플 영상
+                        공개 영상
                     </button>
                     <button 
                         onClick={() => { setIsLocked(true); setSelectedClass(null); setSelectedWeek(null); setIsAuthenticatedWeek(false); fetchInitialData(); }}
@@ -173,7 +173,7 @@ export default function DriveSection() {
                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                             className="w-full flex flex-col gap-4 text-center"
                         >
-                            <h3 className="font-bold text-lg mb-2 underline underline-offset-4 decoration-[#c20000] text-left">맛보기 샘플 영상</h3>
+                            <h3 className="font-bold text-lg mb-2 underline underline-offset-4 decoration-[#c20000] text-left">전체 공개 영상</h3>
                             {renderVideos()}
                         </motion.div>
                     ) : (
@@ -183,19 +183,27 @@ export default function DriveSection() {
                             className="w-full flex flex-col"
                         >
                             {!selectedClass ? (
-                                <div className="flex flex-col gap-3">
-                                    <h3 className="text-sm font-bold text-[#c20000] mb-2 uppercase tracking-wider">Select your class</h3>
+                                <div className="flex flex-col">
+                                    <div className="mb-6 flex items-center gap-3 ml-1">
+                                        <div className="w-1.5 h-5 bg-[#c20000] rounded-full"></div>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Select Class</h3>
+                                    </div>
                                     {classes.length === 0 && !isLoading && (
-                                        <div className="text-sm text-slate-500 bg-white p-4 rounded-xl text-center border shadow-sm">등록된 반이 없습니다.</div>
+                                        <div className="text-sm text-slate-500 py-10 text-center bg-white/80 backdrop-blur-md border border-gray-200/60 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">등록된 반이 없습니다.</div>
                                     )}
                                     {classes.map((cls) => (
                                         <button
                                             key={cls.id}
                                             onClick={() => handleClassSelect(cls)}
-                                            className="bg-white text-left p-5 rounded-2xl border border-gray-200 shadow-sm font-extrabold text-xl hover:bg-black hover:text-white transition-colors flex justify-between items-center group"
+                                            className="w-full relative overflow-hidden text-left py-6 px-7 mb-4 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-3xl hover:border-gray-300 shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_15px_40px_rgb(0,0,0,0.07)] hover:-translate-y-1 transition-all duration-500 flex justify-between items-center group"
                                         >
-                                            {cls.name}
-                                            <ChevronRight className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="flex flex-col z-10">
+                                                <span className="text-[0.6rem] font-bold text-[#c20000] mb-2 tracking-[0.2em] uppercase origin-left transition-transform duration-500 focus:scale-105">Class Selection</span>
+                                                <span className="font-semibold text-2xl tracking-tight text-slate-800 group-hover:text-black transition-colors">{cls.name}</span>
+                                            </div>
+                                            <div className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 group-hover:bg-[#c20000] group-hover:border-[#c20000] group-hover:text-white transition-all duration-500 z-10 shrink-0 shadow-sm">
+                                                <ChevronRight size={20} strokeWidth={1.5} className="group-hover:translate-x-0.5 transition-transform duration-300" />
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
@@ -205,29 +213,29 @@ export default function DriveSection() {
                                         <>
                                             <button 
                                                 onClick={() => setSelectedClass(null)}
-                                                className="flex items-center gap-2 text-sm font-bold text-[#c20000] hover:text-black transition-colors w-fit"
+                                                className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black transition-colors w-fit group"
                                             >
-                                                <ArrowLeft size={16} /> 다른 반 선택하기
+                                                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 다른 반 선택하기
                                             </button>
                                             
-                                            <div className="p-4 bg-black text-white rounded-xl mb-2 shadow-lg">
-                                                <h3 className="font-black text-xl">{selectedClass.name}</h3>
-                                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest">Replay Library</p>
+                                            <div className="px-7 py-8 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-3xl mb-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col justify-center">
+                                                <p className="text-[0.65rem] text-[#c20000] uppercase tracking-[0.25em] font-bold mb-3">Replay Library</p>
+                                                <h3 className="font-bold text-3xl tracking-tight text-slate-900">{selectedClass.name}</h3>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3 pb-8">
+                                            <div className="grid grid-cols-2 gap-4 pb-12">
                                                 {weeks.length === 0 && !isLoading && (
-                                                    <div className="col-span-2 text-center py-10 bg-white rounded-2xl border shadow-sm text-slate-500 text-sm">등록된 주차가 없습니다.</div>
+                                                    <div className="col-span-2 text-center py-10 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.03)] text-slate-500 text-sm">등록된 주차가 없습니다.</div>
                                                 )}
                                                 {weeks.map((week) => (
                                                     <button
                                                         key={week.id}
                                                         onClick={() => handleWeekSelect(week)}
-                                                        className="bg-white border border-black p-5 text-center flex flex-col justify-center items-center hover:bg-black hover:text-white transition-colors active:scale-[0.98]"
+                                                        className="group bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-3xl p-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_15px_40px_rgb(0,0,0,0.07)] hover:-translate-y-1 transition-all duration-500 flex flex-col items-center justify-center"
                                                     >
-                                                        <span className="font-black text-[1rem] uppercase tracking-wider">Week {week.week_number}</span>
-                                                        <span className="text-[0.65rem] font-medium mt-1 opacity-80">{week.title}</span>
-                                                        <span className="text-[0.6rem] font-medium mt-2 text-[#c20000]">{week.date_range}</span>
+                                                        <span className="font-bold text-xl tracking-tight text-slate-800 group-hover:text-black transition-colors">Week {week.week_number}</span>
+                                                        <div className="w-8 h-[2px] bg-gray-100 my-4 group-hover:bg-[#c20000] group-hover:w-12 transition-all duration-500" />
+                                                        <span className="text-[0.7rem] font-medium text-slate-500 group-hover:text-[#c20000] transition-colors tracking-widest">{week.date_range}</span>
                                                     </button>
                                                 ))}
                                             </div>
@@ -244,10 +252,7 @@ export default function DriveSection() {
                                             <div className="w-full flex items-end justify-between border-b-2 border-black pb-3 mb-2">
                                                 <div>
                                                     <h3 className="font-black text-2xl uppercase tracking-wider">Week {selectedWeek.week_number}</h3>
-                                                    <p className="text-sm font-bold text-gray-600 mt-1">{selectedWeek.title}</p>
-                                                </div>
-                                                <div className="bg-[#c20000] text-white text-xs font-bold px-3 py-1 rounded-sm">
-                                                    {selectedWeek.date_range}
+                                                    <p className="text-sm font-bold text-[#c20000] mt-1">{selectedWeek.date_range}</p>
                                                 </div>
                                             </div>
                                             {renderVideos()}

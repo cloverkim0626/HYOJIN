@@ -23,13 +23,13 @@ export default function AdminModal({ isOpen, onClose, onModified }: AdminModalPr
     const [selectedClass, setSelectedClass] = useState('');
     const [weeks, setWeeks] = useState<any[]>([]);
     const [selectedWeek, setSelectedWeek] = useState('');
-
     const [videos, setVideos] = useState<any[]>([]);
-    
-    // New Video Form
+
+    // New/Edit Video Form
     const [newYoutube, setNewYoutube] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newQuizUrl, setNewQuizUrl] = useState('');
+    const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && isAuth) {
@@ -90,31 +90,61 @@ export default function AdminModal({ isOpen, onClose, onModified }: AdminModalPr
         }
     };
 
-    const handleAddVideo = async (e: React.FormEvent) => {
+    const handleAddOrEditVideo = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newYoutube || !newDescription) return alert('유튜브 링크와 설명을 입력해주세요.');
         
         const isSample = activeTab === 'sample';
-        const { error } = await supabase.from('replay_videos').insert({
-            week_id: isSample ? null : selectedWeek,
-            is_sample: isSample,
-            youtube_url: newYoutube,
-            description: newDescription,
-            quiz_url: newQuizUrl || null
-        });
+        
+        if (editingVideoId) {
+            const { error } = await supabase.from('replay_videos').update({
+                youtube_url: newYoutube,
+                description: newDescription,
+                quiz_url: newQuizUrl || null
+            }).eq('id', editingVideoId);
 
-        if (error) {
-            alert('영상 추가에 실패했습니다.');
-            console.error(error);
-            return;
+            if (error) {
+                alert('영상 수정에 실패했습니다.');
+                console.error(error);
+                return;
+            }
+        } else {
+            const { error } = await supabase.from('replay_videos').insert({
+                week_id: isSample ? null : selectedWeek,
+                is_sample: isSample,
+                youtube_url: newYoutube,
+                description: newDescription,
+                quiz_url: newQuizUrl || null
+            });
+
+            if (error) {
+                alert('영상 추가에 실패했습니다.');
+                console.error(error);
+                return;
+            }
         }
 
         setNewYoutube('');
         setNewDescription('');
         setNewQuizUrl('');
+        setEditingVideoId(null);
         if (isSample) fetchSampleVideos();
         else fetchVideos(selectedWeek);
         onModified();
+    };
+
+    const handleEditClick = (v: any) => {
+        setEditingVideoId(v.id);
+        setNewYoutube(v.youtube_url);
+        setNewDescription(v.description);
+        setNewQuizUrl(v.quiz_url || '');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingVideoId(null);
+        setNewYoutube('');
+        setNewDescription('');
+        setNewQuizUrl('');
     };
 
     const handleDeleteVideo = async (id: string) => {
@@ -177,7 +207,7 @@ export default function AdminModal({ isOpen, onClose, onModified }: AdminModalPr
                             {/* Tabs */}
                             <div className="grid grid-cols-3 border-b shrink-0">
                                 <button onClick={() => setActiveTab('student')} className={`p-3 text-sm font-bold transition-colors ${activeTab === 'student' ? 'border-b-2 border-black text-black' : 'text-slate-400 hover:text-black'}`}>수강생 영상</button>
-                                <button onClick={() => setActiveTab('sample')} className={`p-3 text-sm font-bold transition-colors ${activeTab === 'sample' ? 'border-b-2 border-black text-black' : 'text-slate-400 hover:text-black'}`}>샘플 영상</button>
+                                <button onClick={() => setActiveTab('sample')} className={`p-3 text-sm font-bold transition-colors ${activeTab === 'sample' ? 'border-b-2 border-black text-black' : 'text-slate-400 hover:text-black'}`}>공개 영상</button>
                                 <button onClick={() => setActiveTab('week_pass')} className={`p-3 text-sm font-bold transition-colors ${activeTab === 'week_pass' ? 'border-b-2 border-black text-black' : 'text-slate-400 hover:text-black'}`}>비밀번호 관리</button>
                             </div>
 
@@ -200,13 +230,20 @@ export default function AdminModal({ isOpen, onClose, onModified }: AdminModalPr
 
                                         {((activeTab === 'student' && selectedWeek) || activeTab === 'sample') && (
                                             <>
-                                                <form onSubmit={handleAddVideo} className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-3 shadow-inner">
-                                                    <h4 className="font-bold text-sm text-[#c20000] flex items-center gap-1 mb-2"><Plus size={16} /> 신규 영상 추가</h4>
+                                                <form onSubmit={handleAddOrEditVideo} className="bg-gray-50 p-4 border border-gray-200 rounded-xl space-y-3 shadow-inner">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <h4 className="font-bold text-sm text-[#c20000] flex items-center gap-1">
+                                                            {editingVideoId ? <><Edit2 size={16} /> 영상 수정 모드</> : <><Plus size={16} /> 신규 영상 추가</>}
+                                                        </h4>
+                                                        {editingVideoId && (
+                                                            <button type="button" onClick={handleCancelEdit} className="text-xs text-gray-500 hover:text-black font-bold">취소</button>
+                                                        )}
+                                                    </div>
                                                     <input type="url" required placeholder="유튜브 링크 (예: https://youtube.com/watch?v=...)" className="w-full text-sm p-3 border rounded-lg outline-none focus:border-black" value={newYoutube} onChange={e => setNewYoutube(e.target.value)} />
                                                     <input type="text" required placeholder="영상 설명 (진도, 파트 등)" className="w-full text-sm p-3 border rounded-lg outline-none focus:border-black" value={newDescription} onChange={e => setNewDescription(e.target.value)} />
                                                     <input type="url" placeholder="클래스카드 단어 퀴즈 링크 (선택)" className="w-full text-sm p-3 border rounded-lg outline-none focus:border-black" value={newQuizUrl} onChange={e => setNewQuizUrl(e.target.value)} />
-                                                    <button type="submit" className="w-full bg-black text-white font-bold p-3 rounded-lg flex justify-center items-center gap-2 hover:bg-gray-800 transition-colors">
-                                                        <Plus size={16} /> 추가하기
+                                                    <button type="submit" className={`w-full text-white font-bold p-3 rounded-lg flex justify-center items-center gap-2 transition-colors ${editingVideoId ? 'bg-[#c20000] hover:bg-red-800' : 'bg-black hover:bg-gray-800'}`}>
+                                                        {editingVideoId ? <><Check size={16} /> 수정 완료</> : <><Plus size={16} /> 추가하기</>}
                                                     </button>
                                                 </form>
 
@@ -223,9 +260,14 @@ export default function AdminModal({ isOpen, onClose, onModified }: AdminModalPr
                                                                     {v.quiz_url && <span className="text-xs text-green-600 flex items-center gap-1"><LinkIcon size={12}/> 퀴즈O</span>}
                                                                 </div>
                                                             </div>
-                                                            <button type="button" onClick={() => handleDeleteVideo(v.id)} className="p-2 text-slate-400 hover:text-red-600 bg-gray-50 rounded-lg hover:bg-red-50 border border-transparent transition-colors">
-                                                                <Trash2 size={16} />
-                                                            </button>
+                                                            <div className="flex gap-1 shrink-0">
+                                                                <button type="button" onClick={() => handleEditClick(v)} className="p-2 text-slate-400 hover:text-black bg-gray-50 rounded-lg hover:bg-gray-200 border border-transparent transition-colors">
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                                <button type="button" onClick={() => handleDeleteVideo(v.id)} className="p-2 text-slate-400 hover:text-red-600 bg-gray-50 rounded-lg hover:bg-red-50 border border-transparent transition-colors">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
