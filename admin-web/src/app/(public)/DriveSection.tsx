@@ -198,7 +198,6 @@ export default function DriveSection() {
                                             className="w-full relative overflow-hidden text-left py-6 px-7 mb-4 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 rounded-3xl hover:border-white/30 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_15px_40px_rgba(194,0,0,0.15)] hover:-translate-y-1 transition-all duration-500 flex justify-between items-center group"
                                         >
                                             <div className="flex flex-col z-10">
-                                                <span className="text-[0.6rem] font-bold text-[#c20000] mb-2 tracking-[0.2em] uppercase origin-left transition-transform duration-500 focus:scale-105 drop-shadow-[0_0_5px_rgba(194,0,0,0.5)]">수강하는 반 선택</span>
                                                 <span className="font-semibold text-2xl tracking-tight text-slate-300 group-hover:text-white transition-colors">{cls.name}</span>
                                             </div>
                                             <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-white/5 group-hover:bg-[#c20000] group-hover:border-[#c20000] group-hover:text-white transition-all duration-500 z-10 shrink-0 shadow-sm text-slate-400">
