@@ -23,7 +23,8 @@ import {
     BookOpen,
     PenTool,
     AlertCircle,
-    Siren
+    Siren,
+    Crown
 } from 'lucide-react';
 import Image from 'next/image';
 import AdminPanel from './AdminPanel';
@@ -78,22 +79,18 @@ const Typewriter = ({ text, delay = 0, loop = false, textClass = "" }: { text: s
 
 const ScreenAdjustmentBackground = () => {
     return (
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-white flex justify-center">
-            {/* Subtle dot grid */}
-            <div
-                className="absolute inset-0 opacity-[0.4]"
-                style={{
-                    backgroundImage: 'radial-gradient(circle at center, #cbd5e1 1px, transparent 1px)',
-                    backgroundSize: '32px 32px'
-                }}
-            />
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#050508] flex items-center justify-center shadow-black">
+            {/* Deep Space Starfield */}
+            <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+            
+            {/* Big Bang Core - Centered glowing explosive radial gradient */}
+            <div className="absolute w-[180vw] h-[180vw] sm:w-[120vw] sm:h-[120vw] bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.06)_0%,_rgba(0,120,255,0.02)_30%,_transparent_70%)] opacity-90 mix-blend-screen pointer-events-none" />
+            
+            {/* Intense central flares */}
+            <div className="absolute w-[50vw] h-[50vw] sm:w-[30vw] sm:h-[30vw] bg-white rounded-full blur-[100px] opacity-[0.03] mix-blend-screen pointer-events-none" />
 
-            {/* Very soft gradient glows purely for professional depth (no sci-fi) */}
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-50/50 rounded-full blur-[100px]" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-slate-50/80 rounded-full blur-[100px]" />
-
-            {/* Gradient overlay to ensure text is perfectly readable */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-white/90 z-20 pointer-events-none" />
+            {/* Subtle overlay for depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#020205] via-transparent to-black/20 z-20 pointer-events-none" />
         </div>
     );
 };
@@ -110,17 +107,17 @@ const App = () => {
     }, []);
 
     return (
-        <div className="min-h-screen font-sans text-slate-800 selection:bg-blue-100 relative flex flex-col">
+        <div className="min-h-screen font-sans text-slate-200 selection:bg-[#c20000]/40 relative flex flex-col bg-[#050508]">
             <ScreenAdjustmentBackground />
 
             <div className="relative z-10 flex-1 flex flex-col">
                 {/* ── Header ── */}
-                <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm' : 'bg-transparent py-5'}`}>
+                <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#050508]/80 backdrop-blur-xl border-b border-white/10 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' : 'bg-transparent py-5'}`}>
                     <div className="px-6 flex justify-between items-center max-w-5xl mx-auto">
                         <h1 className="text-xl sm:text-2xl font-black tracking-tighter drop-shadow-sm relative">
-                            <Typewriter text="김효진 영어" delay={500} loop={true} textClass="bg-gradient-to-r from-blue-700 via-blue-400 to-indigo-800 bg-clip-text text-transparent relative z-10" />
+                            <Typewriter text="THE HYOJIN" delay={500} loop={true} textClass="font-black tracking-[0.15em] text-white relative z-10 drop-shadow-md" />
                             <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
                                 animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
                                 transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
                             />
@@ -131,14 +128,14 @@ const App = () => {
                                 transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                                 className="hidden sm:flex items-center gap-1.5 mr-2"
                             >
-                                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 shadow-sm flex items-center gap-1">
+                                <span className="text-[11px] font-bold text-white bg-white/10 px-2.5 py-1 rounded-full border border-white/20 shadow-sm flex items-center gap-1 backdrop-blur-sm">
                                     <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c20000] opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#c20000]"></span>
                                     </span>
                                     상담신청 Click!
                                 </span>
-                                <ChevronRight size={12} className="text-blue-400" />
+                                <ChevronRight size={12} className="text-white/50" />
                             </motion.div>
                             <a href="https://open.kakao.com/o/sY6xBxji" target="_blank" rel="noreferrer" className="w-8 h-8 rounded-full bg-[#FEE500] hover:bg-[#ffe833] text-[#371d1e] flex items-center justify-center text-xs shadow-lg transition-transform hover:scale-110" title="카카오톡 상담">
                                 <MessageCircle size={16} fill="currentColor" strokeWidth={0} />
@@ -254,18 +251,13 @@ const HomeSection = () => {
                         initial={{ scale: 0.96, opacity: 0, filter: 'blur(12px)' }}
                         animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
                         transition={{ duration: 3.5, delay: 0.8, ease: "easeOut" }}
-                        className="text-3xl font-extrabold leading-tight tracking-tight mb-2 text-slate-900 relative"
+                        className="text-3xl font-extrabold leading-tight tracking-tight mb-2 text-white relative z-10"
                     >
                         필연적 정답을 설계하는<br />
-                        <span className="relative inline-block">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-400 to-indigo-600">
+                        <span className="relative inline-block mt-1">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-indigo-500 font-black drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
                                 고해상도 영어
                             </span>
-                            <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay"
-                                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
-                                transition={{ repeat: Infinity, duration: 3, ease: "linear", delay: 2 }}
-                            />
                         </span>
                     </motion.h2>
                 </div>
@@ -284,74 +276,80 @@ const HomeSection = () => {
 
                         {/* 명예의 전당 (좌측 독립 트로피) */}
                         {/* 명예의 전당 (좌측 독립 트로피) */}
-                        <div className="absolute left-[10%] sm:left-[22%] top-1/2 -translate-y-1/2 z-20 hidden sm:flex flex-col items-center">
+                        {/* 성적 향상 사례 (좌측 독립 원형) */}
+                        <div className="absolute left-[5%] sm:left-[18%] top-1/2 -translate-y-[40%] z-20 hidden sm:flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
-                                className="group flex flex-col items-center justify-center transition-transform hover:scale-110 duration-300"
+                                className="group relative w-24 h-24 flex items-center justify-center transition-transform hover:scale-110 duration-500"
                             >
-                                <div className="relative w-[85px] h-[85px] transition-all group-hover:scale-110">
-                                    <Image
-                                        src="/images/hof_icon_nobg.png"
-                                        alt="Hall of Fame"
-                                        fill
-                                        className="object-contain transition-all"
-                                    />
+                                {/* Glowing Background Circle */}
+                                <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-lg group-hover:bg-yellow-500/20 transition-all duration-700" />
+                                
+                                {/* The Circle Border and Background */}
+                                <div className="absolute inset-0 rounded-full border border-yellow-500/30 group-hover:border-yellow-400/60 transition-all duration-500 bg-[#0a0a0f]/90 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center overflow-hidden shadow-[0_0_15px_rgba(255,215,0,0.1)] group-hover:shadow-[0_0_25px_rgba(255,215,0,0.3)]">
+                                    <span className="text-[14px] font-black leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-yellow-500 via-yellow-200 to-yellow-600 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+                                        성적 향상<br />사례
+                                    </span>
                                 </div>
-                                <span className="mt-1 text-[13px] font-medium text-yellow-700/80 tracking-widest italic" style={{ fontFamily: "'Playfair Display', serif" }}>Hall of Fame</span>
+
+                                {/* Animated Orbit Effect */}
+                                <motion.div 
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                                    className="absolute -inset-1 border border-dashed border-yellow-500/20 rounded-full pointer-events-none"
+                                />
                             </button>
                         </div>
 
                         {/* 프로필 사진 */}
                         <div className="w-64 h-72 md:w-80 md:h-96 flex items-end justify-center overflow-visible transition-transform duration-500 hover:scale-105 relative z-10 pt-4">
-                            <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-white to-transparent z-20 pointer-events-none" />
+                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050508] via-[#050508]/60 to-transparent z-20 pointer-events-none" />
                             <Image
                                 src="/images/profile3.png"
                                 alt="김효진 강사"
                                 fill
-                                className="object-contain object-bottom drop-shadow-xl z-10"
+                                className="object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.05)] z-10"
                                 sizes="(max-width: 768px) 256px, 320px"
                                 priority
                             />
                         </div>
 
                         {/* 모바일 뷰 전용 명예의 전당 */}
-                        <div className="absolute left-2 top-2 z-20 sm:hidden flex flex-col items-center">
+                        {/* 모바일 뷰 전용 원형 결과버튼 */}
+                        <div className="absolute left-4 top-4 z-20 sm:hidden flex flex-col items-center">
                             <button
                                 onClick={() => setIsHofModalOpen(true)}
-                                className="group flex flex-col items-center justify-center transition-transform hover:scale-110 duration-300"
+                                className="group relative w-20 h-20 flex items-center justify-center transition-transform hover:scale-105 duration-300"
                             >
-                                <div className="relative w-[60px] h-[60px]">
-                                    <Image
-                                        src="/images/hof_icon_nobg.png"
-                                        alt="Hall of Fame"
-                                        fill
-                                        className="object-contain"
-                                    />
+                                <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-lg" />
+                                <div className="absolute inset-0 rounded-full border border-yellow-500/30 bg-[#0a0a0f]/90 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center shadow-[0_0_10px_rgba(255,215,0,0.1)]">
+                                    <span className="text-[12px] font-black leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-yellow-500 via-yellow-100 to-yellow-600 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                                        성적 향상<br />사례
+                                    </span>
                                 </div>
-                                <span className="mt-1 text-[10px] font-medium text-yellow-600/80 tracking-widest italic" style={{ fontFamily: "'Playfair Display', serif" }}>Hall of Fame</span>
                             </button>
                         </div>
                     </div>
 
-                    <div className="w-full text-center space-y-4 relative z-10 px-4 mt-6">
-                        <h3 className="text-slate-900 font-extrabold text-[22px] sm:text-2xl leading-snug mb-4 tracking-tight">
-                            대형강의에 나를 끼워맞추는 공부는 <span className="text-blue-600 whitespace-nowrap">이제 그만.</span><br /><br />
-                            정체된 영어성적,<br className="sm:hidden" /> 원인부터 찾아야 합니다.
+                    <div className="w-full text-center space-y-4 relative z-10 px-4 mt-8">
+                        <h3 className="text-white font-black text-[26px] sm:text-3xl leading-snug mb-6 tracking-tighter drop-shadow-lg">
+                            막히는 지점을 찾아,<br />
+                            나자신의 한계를 극복하는 수업.
                         </h3>
-                        <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
-                            <span className="text-slate-700">개별 진단</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-slate-700">맞춤 커리큘럼</span> <ArrowRight size={14} className="inline text-slate-400 mx-1" /> <span className="text-blue-700 font-bold tracking-wide">[낭비 없는 고득점]</span>
+                        <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-bold">
+                            <span className="text-white">개별 진단</span> <ArrowRight size={14} className="inline text-slate-500 mx-1" /> <span className="text-white">맞춤 커리큘럼</span> <ArrowRight size={14} className="inline text-slate-500 mx-1" /> <span className="text-[#c20000] font-black tracking-wide">[낭비 없는 고득점]</span>
                         </p>
 
                         {/* 이력 보기 버튼 */}
                         <button
                             onClick={() => setIsBioModalOpen(true)}
-                            className="mt-6 w-full max-w-[340px] mx-auto py-4 bg-gradient-to-r from-[#e5e7eb] via-[#f3f4f6] to-[#d1d5db] text-slate-700 rounded-2xl text-base font-black flex items-center justify-center gap-2 hover:-translate-y-1 transition-all shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] relative overflow-hidden group border border-white/40"
+                            className="mt-6 w-full max-w-[340px] mx-auto py-4 bg-[#111118]/80 backdrop-blur-md text-white rounded-2xl text-base font-black flex items-center justify-center gap-2 hover:-translate-y-1 transition-all shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden group"
                         >
                             <span className="relative z-10 flex items-center gap-2 opacity-90">
-                                <GraduationCap size={20} className="text-slate-600" /> 강사 이력 및 약력 보기
+                                <GraduationCap size={20} className="text-white" /> 강사 이력 및 약력 보기
                             </span>
                             <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent bg-[length:200%_100%] pointer-events-none mix-blend-overlay z-20"
                                 animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
                                 transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
                             />
@@ -374,50 +372,50 @@ const HomeSection = () => {
                                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 relative z-10 shadow-2xl"
+                                className="bg-[#111118]/80 backdrop-blur-xl border border-white/10 w-full max-w-md rounded-3xl p-6 relative z-10 shadow-[0_8px_30px_rgba(194,0,0,0.15)]"
                             >
                                 <button
                                     onClick={() => setIsBioModalOpen(false)}
-                                    className="absolute top-4 right-4 p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
+                                    className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-colors"
                                 >
                                     <X size={20} />
                                 </button>
 
                                 <div className="text-center mb-6">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600">
+                                    <div className="w-12 h-12 bg-[#c20000]/20 rounded-full flex items-center justify-center mx-auto mb-3 text-[#c20000] border border-[#c20000]/30">
                                         <GraduationCap size={24} />
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-900">강사 이력</h3>
+                                    <h3 className="text-xl font-bold text-white">강사 이력</h3>
                                 </div>
 
                                 <div className="space-y-6 text-left">
                                     <div className="flex gap-3 items-start">
-                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                        <ul className="text-sm text-slate-600 space-y-2.5 leading-relaxed">
-                                            <li><strong className="text-slate-900">동국대학교 영어통번역학</strong> 졸업</li>
-                                            <li>영화제 통역, 해외사 협업 프로젝트 번역<br /><span className="text-slate-400 text-xs">(도시재생연구원 근무)</span></li>
+                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-[#c20000] shadow-[0_0_10px_rgba(194,0,0,0.8)] shrink-0" />
+                                        <ul className="text-sm text-slate-300 space-y-2.5 leading-relaxed">
+                                            <li><strong className="text-white">동국대학교 영어통번역학</strong> 졸업</li>
+                                            <li>영화제 통역, 해외사 협업 프로젝트 번역<br /><span className="text-slate-500 text-xs">(도시재생연구원 근무)</span></li>
                                         </ul>
                                     </div>
                                     <div className="flex gap-3 items-start">
-                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                        <ul className="text-sm text-slate-600 space-y-2.5 leading-relaxed">
+                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-[#c20000] shadow-[0_0_10px_rgba(194,0,0,0.8)] shrink-0" />
+                                        <ul className="text-sm text-slate-300 space-y-2.5 leading-relaxed">
                                             <li>목동, 강서, 일산지역 중, 고등부 전임</li>
                                             <li>이화여고, 진명여고, 영일고 등 사립고 내신대비 다수</li>
                                         </ul>
                                     </div>
 
-                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                        <div className="text-xs space-y-2.5 text-slate-500 grid grid-cols-1 gap-x-4">
-                                            <p className="flex items-center gap-3"><span className="text-emerald-600 font-bold bg-emerald-100 px-2 py-1 rounded">現</span> <span className="text-slate-700">검단 우독학원</span></p>
-                                            <p className="flex items-center gap-3"><span className="text-slate-500 bg-slate-200 px-2 py-1 rounded">前</span> 화정 이강학원</p>
-                                            <p className="flex items-center gap-3"><span className="text-slate-500 bg-slate-200 px-2 py-1 rounded">前</span> 송도 세정학원</p>
-                                            <p className="flex items-center gap-3"><span className="text-slate-500 bg-slate-200 px-2 py-1 rounded">前</span> 검단 명인학원</p>
+                                    <div className="bg-[#0a0a0f]/80 p-4 rounded-2xl border border-white/10">
+                                        <div className="text-xs space-y-2.5 text-slate-400 grid grid-cols-1 gap-x-4">
+                                            <p className="flex items-center gap-3"><span className="text-[#c20000] font-bold bg-[#c20000]/20 border border-red-500/20 px-2 py-1 rounded">現</span> <span className="text-slate-200">검단 우독학원</span></p>
+                                            <p className="flex items-center gap-3"><span className="text-[#c20000]/60 bg-white/5 border border-white/10 px-2 py-1 rounded">前</span> 화정 이강학원</p>
+                                            <p className="flex items-center gap-3"><span className="text-[#c20000]/60 bg-white/5 border border-white/10 px-2 py-1 rounded">前</span> 송도 세정학원</p>
+                                            <p className="flex items-center gap-3"><span className="text-[#c20000]/60 bg-white/5 border border-white/10 px-2 py-1 rounded">前</span> 검단 명인학원</p>
                                         </div>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setIsBioModalOpen(false)}
-                                    className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors"
+                                    className="w-full mt-6 py-3 bg-[#c20000] hover:bg-red-700 shadow-[0_0_15px_rgba(194,0,0,0.4)] text-white font-bold rounded-xl transition-all"
                                 >
                                     닫기
                                 </button>
@@ -434,46 +432,46 @@ const HomeSection = () => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                                className="absolute inset-0 bg-black/90 backdrop-blur-md"
                                 onClick={() => setIsHofModalOpen(false)}
                             />
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                className="bg-[#f8f9fc] w-full max-w-lg rounded-3xl p-6 sm:p-8 relative z-10 shadow-2xl max-h-[85vh] overflow-y-auto"
+                                className="bg-[#111118]/80 backdrop-blur-xl border border-white/10 w-full max-w-lg rounded-3xl p-6 sm:p-8 relative z-10 shadow-2xl max-h-[85vh] overflow-y-auto"
                             >
                                 <button
                                     onClick={() => setIsHofModalOpen(false)}
-                                    className="absolute top-4 right-4 p-2 bg-slate-200/50 hover:bg-slate-300 rounded-full text-slate-500 transition-colors"
+                                    className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-colors"
                                 >
                                     <X size={20} />
                                 </button>
 
                                 {/* Header Image (데이터로 결과로) */}
-                                <div className="mb-6 rounded-2xl overflow-hidden border border-slate-200">
+                                <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white border border-white/20 p-1.5">
                                     <Image
                                         src="/images/hof.png"
                                         alt="명예의 전당 성과 기록"
                                         width={800}
                                         height={600}
-                                        className="w-full h-auto object-contain"
+                                        className="w-full h-auto object-contain rounded-xl"
                                         priority
                                     />
                                 </div>
 
                                 {/* 신규 연동된 기록 (스타일 통일) */}
                                 <div className="space-y-4">
-                                    <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 relative overflow-hidden text-center mt-6">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-50/50 via-transparent to-yellow-50/50 pointer-events-none" />
+                                    <div className="bg-[#0a0a0f]/60 rounded-2xl p-6 shadow-[0_0_20px_rgba(234,179,8,0.1)] border border-yellow-500/20 relative overflow-hidden text-center mt-6">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 pointer-events-none" />
 
                                         <div className="relative z-10">
-                                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
-                                                <Trophy size={24} className="text-yellow-500" />
+                                            <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-3 border border-yellow-500/30">
+                                                <Trophy size={24} className="text-yellow-400" />
                                             </div>
-                                            <p className="text-sm font-bold text-slate-800 mb-1 tracking-wide">검단고 1학년 박O은</p>
-                                            <p className="text-3xl font-black text-slate-900 mt-2">
-                                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">1등급 달성</span>
+                                            <p className="text-sm font-bold text-slate-300 mb-1 tracking-wide">검단고 1학년 박O은</p>
+                                            <p className="text-3xl font-black text-white mt-2">
+                                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">1등급 달성</span>
                                             </p>
                                         </div>
                                     </div>
@@ -587,21 +585,21 @@ const TimetableSection = () => {
     return (
         <SectionWrapper>
             <div className="py-8 min-h-[70vh]">
-                <h2 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900">Class Schedule</h2>
-                <p className="text-sm text-slate-500 mb-8 border-b border-slate-200 pb-4">우독학원 정규반 및 클리닉 시간표</p>
+                <h2 className="text-3xl font-extrabold mb-2 tracking-tight text-white">Class Schedule</h2>
+                <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-4">우독학원 정규반 및 클리닉 시간표</p>
                 <div className="space-y-5">
                     {schedule.map((item, idx) => (
-                        <div key={idx} className="bg-white border border-slate-200 rounded-3xl p-6 relative overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100/50 transition-colors" />
+                        <div key={idx} className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgba(194,0,0,0.1)] transition-all">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-[#c20000]/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-[#c20000]/20 transition-colors" />
 
-                            <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between gap-2">
+                            <h4 className="text-lg font-bold text-white mb-4 flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                                    <span className="w-2 h-2 rounded-full bg-[#c20000] shadow-[0_0_10px_rgba(194,0,0,0.8)]" />
                                     {item.class}
                                 </div>
                                 <button
                                     onClick={() => setSelectedSyllabus(item.syllabusUrl)}
-                                    className="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-sm"
+                                    className="text-[11px] bg-white/5 hover:bg-white/10 text-slate-300 px-3 py-1.5 rounded-lg border border-white/10 transition-colors flex items-center gap-1.5 shadow-sm"
                                 >
                                     <ClipboardList size={12} /> 강의계획서
                                 </button>
@@ -609,14 +607,14 @@ const TimetableSection = () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
                                 {item.times.map((session, sIdx) => (
-                                    <div key={sIdx} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center justify-between">
+                                    <div key={sIdx} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm">
+                                            <div className="w-8 h-8 rounded-lg bg-[#c20000] shadow-[0_0_10px_rgba(194,0,0,0.4)] border border-red-500/50 text-white font-bold flex items-center justify-center text-sm">
                                                 {session.day}
                                             </div>
-                                            <span className="text-sm font-medium text-slate-700 tracking-wide">{session.time}</span>
+                                            <span className="text-sm font-medium text-slate-200 tracking-wide">{session.time}</span>
                                         </div>
-                                        <span className={`text-[10px] px-2 py-1 rounded-md font-bold tracking-wider ${session.type === '클리닉' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-slate-600 border border-slate-200 bg-white'}`}>
+                                        <span className={`text-[10px] px-2 py-1 rounded-md font-bold tracking-wider ${session.type === '클리닉' ? 'bg-[#c20000]/20 text-[#ff6666] border border-[#c20000]/30' : 'text-slate-300 border border-white/20 bg-white/5'}`}>
                                             {session.type}
                                         </span>
                                     </div>
@@ -634,27 +632,27 @@ const TimetableSection = () => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                                className="absolute inset-0 bg-black/80 backdrop-blur-md"
                                 onClick={() => setSelectedSyllabus(null)}
                             />
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                className="bg-white w-full max-w-2xl rounded-3xl relative z-10 shadow-2xl h-[85vh] flex flex-col overflow-hidden text-left"
+                                className="bg-[#111118] border border-white/10 w-full max-w-2xl rounded-3xl relative z-10 shadow-2xl h-[85vh] flex flex-col overflow-hidden text-left"
                             >
-                                <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 shrink-0">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <ClipboardList size={18} className="text-blue-500" /> 강의계획서
+                                <div className="flex justify-between items-center p-4 border-b border-white/10 bg-[#0a0a0f] shrink-0">
+                                    <h3 className="font-bold text-white flex items-center gap-2">
+                                        <ClipboardList size={18} className="text-[#c20000]" /> 강의계획서
                                     </h3>
                                     <button
                                         onClick={() => setSelectedSyllabus(null)}
-                                        className="p-2 bg-white hover:bg-slate-200 rounded-full text-slate-500 transition-colors border border-slate-200 shadow-sm"
+                                        className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-colors border border-white/10 shadow-sm"
                                     >
                                         <X size={20} />
                                     </button>
                                 </div>
-                                <div className="flex-1 w-full bg-slate-100 relative max-h-[calc(85vh-60px)]">
+                                <div className="flex-1 w-full bg-[#1e1e24] relative max-h-[calc(85vh-60px)]">
                                     <iframe
                                         src={selectedSyllabus}
                                         className="absolute inset-0 w-full h-full border-0 bg-white"
@@ -704,31 +702,31 @@ const ManagementSection = () => {
     return (
         <SectionWrapper>
             <div className="py-8 min-h-[80vh]">
-                <h2 className="text-3xl font-extrabold mb-2 tracking-tight text-slate-900">수업 및 관리</h2>
-                <p className="text-sm text-slate-500 mb-8 border-b border-slate-200 pb-4">감에 의존하지 않는 정교한 데이터 관리 체계</p>
+                <h2 className="text-3xl font-extrabold mb-2 tracking-tight text-white">수업 및 관리</h2>
+                <p className="text-sm text-slate-400 mb-8 border-b border-white/10 pb-4">감에 의존하지 않는 정교한 데이터 관리 체계</p>
 
                 <div className="space-y-12">
 
                     {/* 효진T 전용 교재 시스템 */}
                     <div className="space-y-4">
-                        <div className="flex gap-4 sm:gap-6 p-4 sm:p-6 bg-white rounded-3xl border border-slate-200 items-start shadow-sm">
-                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100 text-orange-500 mt-1 shrink-0 text-lg">📖</div>
+                        <div className="flex gap-4 sm:gap-6 p-4 sm:p-6 bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl items-start shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgba(234,88,12,0.1)] transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-orange-900/20 flex items-center justify-center border border-orange-500/20 text-orange-500 mt-1 shrink-0 text-lg">📖</div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>효진T 전용 교재</h3>
-                                <p className="text-sm font-bold text-orange-600 mb-2 tracking-wide">
+                                <h3 className="text-xl font-bold text-white mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>효진T 전용 교재</h3>
+                                <p className="text-sm font-bold text-orange-400 mb-2 tracking-wide">
                                     [수업 및 관리 시스템 : 효진T 전용 교재]
                                 </p>
                                 <div className="space-y-3 mt-4">
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-orange-200 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">판서와 100% 동기화된 시스템</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-orange-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">판서와 100% 동기화된 시스템</strong>
                                         수업 중 판서 구조가 교재에 그대로 이식되어 있습니다.
                                     </p>
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-orange-200 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">[지문요약] → [구조화] → [핵심 키워드 각인]</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-orange-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">[지문요약] → [구조화] → [핵심 키워드 각인]</strong>
                                         3단계 필기를 통해, 킬러 문항과 서술형을 선제적으로 공략합니다.
                                     </p>
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-orange-200 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">내신 기출 데이터 기반 정밀 설계</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-orange-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">내신 기출 데이터 기반 정밀 설계</strong>
                                         기출 데이터를 분석하여 교재 내에 [빈칸/순서/어법/서술형] 등 학교 시험 출제 확률이 높은 유형만 골라 정밀하게 설계했습니다.
                                     </p>
                                 </div>
@@ -737,14 +735,14 @@ const ManagementSection = () => {
 
                         {/* 교재 Image Gallery */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-slate-50 border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-slate-200 group bg-white">
-                                    <Image src="/images/book1.jpg" alt="교재 디자인 1" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/book1.jpg" alt="교재 디자인 1" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-90" />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-slate-200 group bg-white">
-                                    <Image src="/images/book2.jpg" alt="교재 디자인 2" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/book2.jpg" alt="교재 디자인 2" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-90" />
                                 </div>
                             </div>
                         </div>
@@ -753,33 +751,33 @@ const ManagementSection = () => {
                     {/* ClassSync 관리 시스템 */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100 text-blue-600"><ClipboardList size={20} /></div>
+                            <div className="w-10 h-10 rounded-xl bg-blue-900/20 flex items-center justify-center border border-blue-500/20 text-blue-400"><ClipboardList size={20} /></div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-1">ClassSync 시스템</h3>
-                                <p className="text-sm font-bold text-blue-600 mb-2">[빈틈없는 성적 방어 시스템]</p>
+                                <h3 className="text-xl font-bold text-white mb-1">ClassSync 시스템</h3>
+                                <p className="text-sm font-bold text-blue-400 mb-2">[빈틈없는 성적 방어 시스템]</p>
                                 <div className="space-y-3 mt-3">
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-slate-300 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">이월(Carry-over) 로직: "모르면 넘어갈 수 없다."</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-blue-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">이월(Carry-over) 로직: "모르면 넘어갈 수 없다."</strong>
                                         미완료 과제는 캘린더에 자동 누적되어 완료 시까지 끝까지 추적합니다.
                                     </p>
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-slate-300 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">100% 동기화 관리</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-blue-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">100% 동기화 관리</strong>
                                         강사가 직접 설계한 시스템으로 출결부터 보강까지, 학습의 모든 공백을 데이터로 메웁니다.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-4 sm:p-6 space-y-4 shadow-md">
-                            <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-slate-200 group">
-                                <Image src="/images/sync1.jpg" alt="ClassSync Dashboard" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-4 sm:p-6 space-y-4 shadow-md">
+                            <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-white/5 group">
+                                <Image src="/images/sync1.jpg" alt="ClassSync Dashboard" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="aspect-video relative rounded-2xl overflow-hidden border border-slate-200 group">
-                                    <Image src="/images/sync2.jpg" alt="Attendance Detail" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <div className="aspect-video relative rounded-2xl overflow-hidden border border-white/5 group">
+                                    <Image src="/images/sync2.jpg" alt="Attendance Detail" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
                                 </div>
-                                <div className="aspect-video relative rounded-2xl overflow-hidden border border-slate-200 group">
-                                    <Image src="/images/sync3.jpg" alt="Message Setup" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <div className="aspect-video relative rounded-2xl overflow-hidden border border-white/5 group">
+                                    <Image src="/images/sync3.jpg" alt="Message Setup" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
                                 </div>
                             </div>
                         </div>
@@ -787,20 +785,20 @@ const ManagementSection = () => {
 
                     {/* Text Universe 시스템 */}
                     <div className="space-y-4">
-                        <div className="flex gap-4 sm:gap-6 mt-8 p-4 sm:p-6 bg-white rounded-3xl border border-slate-200 items-start shadow-sm hover:shadow-md transition-shadow">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100 text-indigo-500 mt-1 shrink-0">🌌</div>
+                        <div className="flex gap-4 sm:gap-6 mt-8 p-4 sm:p-6 bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl items-start shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.15)] transition-all">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-900/20 flex items-center justify-center border border-indigo-500/20 text-indigo-400 mt-1 shrink-0">🌌</div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>Text Universe</h3>
-                                <p className="text-sm font-bold text-indigo-600 mb-2 tracking-wide">
+                                <h3 className="text-xl font-bold text-white mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>Text Universe</h3>
+                                <p className="text-sm font-bold text-indigo-400 mb-2 tracking-wide">
                                     "복제 불가능한 효진T 직접 설계 툴, 그 차이가 '압도적 격차'를 만듭니다."
                                 </p>
                                 <div className="space-y-3 mt-4">
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-indigo-200 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">All-Pass 아카이빙</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">All-Pass 아카이빙</strong>
                                         수업에서 다룬 모든 지문의 강의를 유튜브 DB로 구축. 놓친 문장, 흐려진 개념은 클릭 한 번으로 즉시 복구합니다.
                                     </p>
-                                    <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-indigo-200 pl-3">
-                                        <strong className="text-slate-800 block mb-0.5">Active Output 판서</strong>
+                                    <p className="text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500/30 pl-3">
+                                        <strong className="text-slate-100 block mb-0.5">Active Output 판서</strong>
                                         단순히 받아적는 판서가 아닙니다. 효진T가 직접 설계한 구조도를 통해, 학생이 스스로 지문의 논리를 인출(Output)하도록 훈련합니다.
                                     </p>
                                 </div>
@@ -809,29 +807,29 @@ const ManagementSection = () => {
 
                         {/* Text Universe Image Gallery */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-slate-200 group">
-                                    <Image src="/images/universe.jpg" alt="Text Universe 구조" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-white/5 group">
+                                    <Image src="/images/universe.jpg" alt="Text Universe 구조" fill className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" />
                                 </div>
                             </div>
-                            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-                                    <Image src="/images/tu1.jpg" alt="Text Universe 화면 1" fill className="object-contain group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/tu1.jpg" alt="Text Universe 화면 1" fill className="object-contain group-hover:scale-105 transition-transform duration-700 opacity-85" />
                                 </div>
                             </div>
-                            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-                                    <Image src="/images/tu2.jpg" alt="Text Universe 화면 2" fill className="object-contain group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/tu2.jpg" alt="Text Universe 화면 2" fill className="object-contain group-hover:scale-105 transition-transform duration-700 opacity-85" />
                                 </div>
                             </div>
-                            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md">
-                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-                                    <Image src="/images/tu3.jpg" alt="Text Universe 화면 3" fill className="object-contain group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md">
+                                <div className="aspect-[16/10] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/tu3.jpg" alt="Text Universe 화면 3" fill className="object-contain group-hover:scale-105 transition-transform duration-700 opacity-85" />
                                 </div>
                             </div>
-                            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden p-3 shadow-md sm:col-span-2 lg:col-span-2">
-                                <div className="aspect-[21/9] relative rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-                                    <Image src="/images/tu4.jpg" alt="Text Universe 화면 4" fill className="object-contain group-hover:scale-105 transition-transform duration-700" />
+                            <div className="bg-[#111118]/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-3 shadow-md sm:col-span-2 lg:col-span-2">
+                                <div className="aspect-[21/9] relative rounded-2xl overflow-hidden border border-white/5 group bg-[#0a0a0f]">
+                                    <Image src="/images/tu4.jpg" alt="Text Universe 화면 4" fill className="object-contain group-hover:scale-105 transition-transform duration-700 opacity-85" />
                                 </div>
                             </div>
                         </div>
